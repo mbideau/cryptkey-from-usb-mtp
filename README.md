@@ -38,20 +38,20 @@ Create or choose a file to be your key file
 ```
 > dd if=/dev/urandom of=/mnt/mtp-device/secret_key.bin bs=1kB count=30
 ```
-_Replace '/mnt/mtp-device/secret_key.bin' with the path to the key file in your mounted USB MTP device's filesystem._
+*Replace '/mnt/mtp-device/secret_key.bin' with the path to the key file in your mounted USB MTP device's filesystem.*
 **Note: if you want to be able to use the caching mecanism, you must use a key file which size is less than 32kB.**
 
 And add it to your luks devices
 ```
 > sudo cryptsetup luksAddKey /dev/vda1 /mnt/mtp-device/secret_key.bin
 ```
-_Replace '/dev/vda1' with your encrypted drive and '/mnt/mtp-device/secret_key.bin' with your key file path (as above)._
+*Replace '/dev/vda1' with your encrypted drive and '/mnt/mtp-device/secret_key.bin' with your key file path (as above).*
 
 Adjust the `/etc/crypttab` entries accordingly
 ```
 vda1_crypt  UUID=5163bc36 'secret_key.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp.sh,initramfs
 ```
-_Replace 'vda1_crypt' with the device mapper name you want (same as your encrypted drive plus suffix '_crypt' is common)._
+*Replace 'vda1_crypt' with the device mapper name you want (same as your encrypted drive plus suffix '_crypt' is common).*
 
 Install the initramfs hook
 ```
