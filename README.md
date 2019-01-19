@@ -11,75 +11,75 @@ So with this script, you will be able to unlock your encrypted hard disk at boot
 
 If you want to use USB MTP device (that's the whole point) you will need the **jmtpfs** binary.
 On Debian you can install it with:
-```
-> apt install jmtpfs
+```sh
+apt install jmtpfs
 ```
 
 If you want to have key caching, to prevent multiple mounting/unmounting of the USB MTP device, you will need **keyctl** binary.
 On Debian you can install it with:
-```
-> apt install keyutils
+```sh
+apt install keyutils
 ```
 
 ## Installation
 
 You should have already an encrypted disk/partition with LUKS, let's say we choose `/dev/vda1`
-```
+```sh
 # should not print anything
-> cryptsetup isLuks /dev/vda1||echo 'Not a LUKS device'
+cryptsetup isLuks /dev/vda1||echo 'Not a LUKS device'
 ```
 
-Clone this repository somewhere (over the rainbow) in your filesystem
-```
+Clone this repository somewhere ~~over the rainbow~~ in your filesystem
+```sh
 git clone -q https://github.com/mbideau/cryptkey-from-usb-mtp.git /tmp/cryptkey-from-usb-mtp
 ```
 
 Copy the file `cryptkey-from-usb-mtp.sh` to your `/sbin` directory and ensure it has the _execute_ permission flag set
-```
-> sudo cp /tmp/cryptkey-from-usb-mtp/cryptkey-from-usb-mtp.sh /sbin/cryptkey-from-usb-mtp
-> sudo chmod +x /sbin/cryptkey-from-usb-mtp
+```sh
+sudo cp /tmp/cryptkey-from-usb-mtp/cryptkey-from-usb-mtp.sh /sbin/cryptkey-from-usb-mtp
+sudo chmod +x /sbin/cryptkey-from-usb-mtp
 ```
 
 Create or choose a file to be your key file
-```
-> dd if=/dev/urandom of=/mnt/mtp-device/secret_key.bin bs=1kB count=30
+```sh
+dd if=/dev/urandom of=/mnt/mtp-device/secret_key.bin bs=1kB count=30
 ```
 *Replace '/mnt/mtp-device/secret_key.bin' with the path to the key file in your mounted USB MTP device's filesystem.*  
 **Note: if you want to be able to use the caching mecanism, you must use a key file which size is less than 32kB.**
 
 And add it to your luks devices
-```
-> sudo cryptsetup luksAddKey /dev/vda1 /mnt/mtp-device/secret_key.bin
+```sh
+sudo cryptsetup luksAddKey /dev/vda1 /mnt/mtp-device/secret_key.bin
 ```
 *Replace '/dev/vda1' with your encrypted drive and '/mnt/mtp-device/secret_key.bin' with your key file path (as above).*  
 
 Adjust the `/etc/crypttab` entries accordingly (See [documentation](https://manpages.debian.org/stable/cryptsetup/crypttab.5.en.html))
-```
+```sh
 vda1_crypt  UUID=5163bc36 'secret_key.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
 ```
 *Replace 'vda1_crypt' with the device mapper name you want (same as your encrypted drive plus suffix '_crypt' is common).*
 
 Install the initramfs hook
-```
-> cryptkey-from-usb-mtp --initramfs-hook
+```sh
+cryptkey-from-usb-mtp --initramfs-hook
 ```
 
 Update the initramfs
-```
-> update-initramfs -tuck all
+```sh
+update-initramfs -tuck all
 ```
 
 Check that everything has been copied inside initramfs
-```
-> cryptkey-from-usb-mtp --check-initramfs
+```sh
+cryptkey-from-usb-mtp --check-initramfs
 ```
 
 Reboot and pray hard! ^^'
-```
-> reboot
+```sh
+reboot
 ```
 
-**Say thank you** (star the repo on Github, email me, spread the words) ;-)
+**Say thank you :heartbeat:** (:star: star the repo on Github, :love_letter: email me, :loudspeaker: spread the words) ;-)
 
 
 ## Tests
