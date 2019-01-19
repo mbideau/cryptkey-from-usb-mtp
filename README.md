@@ -55,13 +55,13 @@ And add it to your luks devices
 
 Adjust the `/etc/crypttab` entries accordingly (See [documentation](https://manpages.debian.org/stable/cryptsetup/crypttab.5.en.html))
 ```
-vda1_crypt  UUID=5163bc36 'secret_key.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp.sh,initramfs
+vda1_crypt  UUID=5163bc36 'secret_key.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
 ```
 *Replace 'vda1_crypt' with the device mapper name you want (same as your encrypted drive plus suffix '_crypt' is common).*
 
 Install the initramfs hook
 ```
-> cryptkey-from-usb-mtp.sh --initramfs-hook
+> cryptkey-from-usb-mtp --initramfs-hook
 ```
 
 Update the initramfs
@@ -71,7 +71,7 @@ Update the initramfs
 
 Check that everything has been copied inside initramfs
 ```
-> cryptkey-from-usb-mtp.sh --check-initramfs
+> cryptkey-from-usb-mtp --check-initramfs
 ```
 
 Reboot and pray hard! ^^'
