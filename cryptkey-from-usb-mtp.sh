@@ -31,6 +31,7 @@ KERNEL_CACHE_ENABLED=$TRUE
 KERNEL_CACHE_MAX_SIZE_KB=32
 KERNEL_CACHE_TIMEOUT_SEC=120
 INITRAMFS_HOOK_PATH_DEFAULT=/etc/initramfs-tools/hook/`basename "$0" '.sh'`
+INITRAMFS_PATH_DEFAULT=/boot/initrd.img-`uname -r`
 
 # internal constants
 _FLAG_WAITED_FOR_DEVICE_ALREADY=/.mtp-waited-already.flag
@@ -49,37 +50,42 @@ Print a key to STDOUT from a key file stored on a USB MTP device.
 USAGE: `basename "$0"` OPTIONS [keyfile]
 
 ARGUMENTS:
-    keyfile    optional    Is the path to a key file.
+  keyfile    optional      Is the path to a key file.
                            The argument is optional if the env var CRYPTTAB_KEY
                            is specified, required otherwise.
                            It is relative to the device mount point/dir.
                            Quotes ['"] will be removed at the begining and end.
                            If it starts with 'urlenc:' it will be URL decoded.
 OPTIONS:
-    -h|--help              Display this help.
+  -h|--help                Display this help.
 
-    --encode STRING        When specified, expext a string as unique argument.
+  --encode STRING          When specified, expext a string as unique argument.
                            The string will be URL encoded and printed.
                            NOTE: Usefull to create a key path without spaces
                            to use into /etc/crypttab at the third column.
 
-    --decode STRING        When specified, expext a string as unique argument.
+  --decode STRING          When specified, expext a string as unique argument.
                            The string will be URL decoded and printed.
 
-    --initramfs-hook PATH  Create an initramfs hook to path.
+  --initramfs-hook [PATH]  Create an initramfs hook to path.
                            PATH is optional. It defaults to:
                              '$INITRAMFS_HOOK_PATH_DEFAULT'.
 
+  --check-initramfs [PATH] Check that every requirements had been copied
+                           inside the initramfs specified.
+                           PATH is optional. It defaults to:
+                             '$INITRAMFS_PATH_DEFAULT'.
+
 ENV:
-    CRYPTTAB_KEY           A path to a key file.
+  CRYPTTAB_KEY             A path to a key file.
                            The env var is optional if the argument 'keyfile'
                            is specified, required otherwise.
                            Same process apply as for the 'keyfile' argument,
                            i.e.: removing quotes and URL decoding.
 
-    cryptsource            (informative only) The disk source to unlock.
+  cryptsource              (informative only) The disk source to unlock.
 
-    crypttarget            (informative only) The target device mapper name unlocked.
+  crypttarget              (informative only) The target device mapper name unlocked.
 
 
 EXAMPLES:
@@ -130,6 +136,68 @@ copy_file 'file' "`realpath "$0"`"
 
 exit 0
 ENDCAT
+}
+# check that every requirements had been copied inside the initramfs specified
+check_initramfs()
+{
+	_tmpfile="`mktemp`"
+	_error_found=$FALSE
+	# list files inside initramfs
+	lsinitramfs "$1" >"$_tmpfile"
+
+	# kernel modules usb and fuse
+	for _module in usb-common fuse; do
+		if ! grep -q "${_module}\.ko" "$_tmpfile"; then
+			error "Kernel module '$_module' (${_module}\.ko) not found"
+			_error_found=$TRUE
+		fi
+	done
+
+	# libraries usb and fuse
+	for _library in usb fuse; do
+		if ! grep -q "lib${_library}\(-[0-9.]\+\)\?\.so" "$_tmpfile"; then
+			error "Library '$_library' (lib${_library}\(-[0-9.]\+\)\?\.so) not found"
+			_error_found=$TRUE
+		fi
+	done
+
+	# jmtpfs binary
+	if ! grep -q 'bin/jmtpfs' "$_tmpfile"; then
+		error "Binary 'jmtpfs' (bin/jmtpfs) not found"
+		_error_found=$TRUE
+	fi
+
+	# /usr/share/misc/magic directory (required to prevent crashing jmtpfs
+	# which depends on its existence, even empty)
+	if ! grep -q 'usr/share/misc/magic' "$_tmpfile"; then
+		error "Directory 'magic' (usr/share/misc/magic) not found"
+		_error_found=$TRUE
+	fi
+
+	# this script
+	if ! grep -q "`basename "$0" '.sh'`" "$_tmpfile"; then
+		error "Shell script '`basename "$0" '.sh'`' not found"
+		_error_found=$TRUE
+	fi
+
+	# keyctl binary (optional)
+	if ! grep -q 'bin/keyctl' "$_tmpfile"; then
+		warning "Binary 'keyctl' (bin/keyctl) not found"
+	fi
+
+	# remove temp file
+	rm -f "$_tmpfile" >/dev/null||true
+
+	# on error
+	if [ "$_error_found" = "$TRUE" ]; then
+		error "To further investigate, you can use this command to list files inside initramfs:
+> lsinitramfs "'"'"$1"'"'
+		return $FALSE
+	fi
+
+	# success
+	info "OK. Initramfs '$1' seems to contain every thing required."
+	return $TRUE
 }
 # URL encode a string (first and unique argument)
 urlencode()
@@ -257,6 +325,20 @@ if [ "$1" = '--initramfs-hook' ]; then
     info "Initramfs hook shell script created at '$_hook_path'."
     info "You should execute 'update-initramfs -tuck all' now."
     exit 0
+fi
+
+# check initramfs
+if [ "$1" = '--check-initramfs' ]; then
+    _initramfs_path="$INITRAMFS_PATH_DEFAULT"
+    if [ "$2" != '' ]; then
+        _initramfs_path="$2"
+    fi
+    if [ ! -r "$_initramfs_path" ]; then
+        error "Initramfs file '$_initramfs_path' doesn't exist or isn't readable"
+        exit 2
+    fi
+    check_initramfs "$_initramfs_path"
+    exit $?
 fi
 
 # key is specified (either by env var or argument)
