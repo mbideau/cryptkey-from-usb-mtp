@@ -212,6 +212,7 @@ check_initramfs()
 	return $TRUE
 }
 # URL encode a string (first and unique argument)
+# inspired/copied from here: https://stackoverflow.com/a/10660730
 urlencode()
 {
 	_string="$1"
