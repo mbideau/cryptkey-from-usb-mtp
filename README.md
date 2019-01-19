@@ -1,10 +1,10 @@
 # cryptkey-from-usb-mtp
 
-Read a key file from a USB MTP device (with fallback to askpass), meant for unlocking with cryptsetup and crypttab in initramfs.
+Read a key file from a USB [MTP](https://en.wikipedia.org/wiki/Media_Transfer_Protocol) device (with fallback to _askpass_), meant for unlocking encrypted hard drive with *[cryptsetup](https://wiki.debian.org/CryptsetupDebug)* and _[crypttab](https://manpages.debian.org/stable/cryptsetup/crypttab.5.en.html)_ in *[initramfs](https://wiki.debian.org/initramfs)*.
 
-USB MTP devices are usually _Android_ smartphones.
+USB MTP devices are usually _Android_ smartphones these days, althouth it started as the _Media Transfer Protocol_ from the _Windows Media_ framework, because it was standardised in May 2008 as a full-fledged USB device class (according to *[Wikipedia](https://en.wikipedia.org/wiki/Media_Transfer_Protocol)*).
 
-So with this script, you will be able to unlock your encrypted hard disk at boot with just pluging your phone to the computer (assuming you have copied the secret key to it) ;-)
+So with this script, you will be able to unlock your encrypted hard disk at boot with just pluging your phone to the computer (assuming you have copied the secret key to it) **;-)**
 
 
 ## Requirements
@@ -23,6 +23,12 @@ On Debian you can install it with:
 
 ## Installation
 
+You should have already an encrypted disk/partition with LUKS, let's say we choose `/dev/vda1`
+```
+# should not print anything
+> cryptsetup isLuks /dev/vda1||echo 'Not a LUKS device'
+```
+
 Clone this repository somewhere (over the rainbow) in your filesystem
 ```
 git clone -q https://github.com/mbideau/cryptkey-from-usb-mtp.git /tmp/cryptkey-from-usb-mtp
@@ -30,8 +36,8 @@ git clone -q https://github.com/mbideau/cryptkey-from-usb-mtp.git /tmp/cryptkey-
 
 Copy the file `cryptkey-from-usb-mtp.sh` to your `/sbin` directory and ensure it has the _execute_ permission flag set
 ```
-> sudo cp /tmp/cryptkey-from-usb-mtp/cryptkey-from-usb-mtp.sh /sbin/cryptkey-from-usb-mtp.sh
-> sudo chmod +x /sbin/cryptkey-from-usb-mtp.sh
+> sudo cp /tmp/cryptkey-from-usb-mtp/cryptkey-from-usb-mtp.sh /sbin/cryptkey-from-usb-mtp
+> sudo chmod +x /sbin/cryptkey-from-usb-mtp
 ```
 
 Create or choose a file to be your key file
@@ -45,9 +51,9 @@ And add it to your luks devices
 ```
 > sudo cryptsetup luksAddKey /dev/vda1 /mnt/mtp-device/secret_key.bin
 ```
-*Replace '/dev/vda1' with your encrypted drive and '/mnt/mtp-device/secret_key.bin' with your key file path (as above).*
+*Replace '/dev/vda1' with your encrypted drive and '/mnt/mtp-device/secret_key.bin' with your key file path (as above).*  
 
-Adjust the `/etc/crypttab` entries accordingly
+Adjust the `/etc/crypttab` entries accordingly (See [documentation](https://manpages.debian.org/stable/cryptsetup/crypttab.5.en.html))
 ```
 vda1_crypt  UUID=5163bc36 'secret_key.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp.sh,initramfs
 ```
@@ -82,78 +88,83 @@ This has been extensively tested on my desktop machine with _Debian stretch (9.5
 No more, **be warned**.
 
 
-## Known bugs / Issues
-
-When a USB MTP device is mounted, the shell script checks if the filesystem is accessible.
-If not, it assumes the device is not unlocked (like most _Android_ smartphones), and ask the user to do so (then hit enter) in loop until the filesystem is accessible.
-Half of the time, I encouter an issue here because, even when the device is unlocked, the filesystem remains unaccessible.
-So my recommendation is to **always unlock the USB MTP device before this script is launched** (and maintain it this way as long as the script has not cached the key or finished its job).
-
-
 ## Usage / Help
 
 ```
 
 Print a key to STDOUT from a key file stored on a USB MTP device.
 
-USAGE: cryptkey-from-usb-mtp.sh OPTIONS [keyfile]
+USAGE: cryptkey-from-usb-mtp  OPTIONS  [keyfile]
 
 ARGUMENTS:
-    keyfile    optional    Is the path to a key file.
+  keyfile    optional      Is the path to a key file.
                            The argument is optional if the env var CRYPTTAB_KEY
                            is specified, required otherwise.
                            It is relative to the device mount point/dir.
                            Quotes ['"] will be removed at the begining and end.
                            If it starts with 'urlenc:' it will be URL decoded.
 OPTIONS:
-    -h|--help              Display this help.
+  -h|--help                Display this help.
 
-    --encode STRING        When specified, expext a string as unique argument.
+  --encode STRING          When specified, expext a string as unique argument.
                            The string will be URL encoded and printed.
                            NOTE: Usefull to create a key path without spaces
                            to use into /etc/crypttab at the third column.
 
-    --decode STRING        When specified, expext a string as unique argument.
+  --decode STRING          When specified, expext a string as unique argument.
                            The string will be URL decoded and printed.
 
-    --initramfs-hook PATH  Create an initramfs hook to path.
+  --initramfs-hook [PATH]  Create an initramfs hook to path.
                            PATH is optional. It defaults to:
                              '/etc/initramfs-tools/hook/cryptkey-from-usb-mtp'.
 
+  --check-initramfs [PATH] Check that every requirements had been copied
+                           inside the initramfs specified.
+                           PATH is optional. It defaults to:
+                             '/boot/initrd.img-4.9.0-8-amd64'.
+
 ENV:
-    CRYPTTAB_KEY           A path to a key file.
+  CRYPTTAB_KEY             A path to a key file.
                            The env var is optional if the argument 'keyfile'
                            is specified, required otherwise.
                            Same process apply as for the 'keyfile' argument,
                            i.e.: removing quotes and URL decoding.
 
-    cryptsource            (informative only) The disk source to unlock.
+  cryptsource              (informative only) The disk source to unlock.
 
-    crypttarget            (informative only) The target device mapper name unlocked.
+  crypttarget              (informative only) The target device mapper name unlocked.
 
 
 EXAMPLES:
-    # encoding a string to further add it to /etc/crypttab
-    > cryptkey-from-usb-mtp.sh --encode 'relative/path to/key/file/on/usb/mtp/device'
+  # encoding a string to further add it to /etc/crypttab
+  > cryptkey-from-usb-mtp --encode 'relative/path to/key/file/on/usb/mtp/device'
 
-    # decode a URL encoded string, just to test
-    > cryptkey-from-usb-mtp.sh --decode 'relative/path%20to/key/file/on/usb/mtp/device'
+  # decode a URL encoded string, just to test
+  > cryptkey-from-usb-mtp --decode 'relative/path%20to/key/file/on/usb/mtp/device'
 
-    # a crypttab entry configuration URL encoded to prevent crashing on spaces and UTF8 chars
-    md0_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp.sh,initramfs
+  # used as a standalone shell command to unlock a disk
+  > crypttarget=md0_crypt cryptsource=/dev/disk/by-uuid/5163bc36 \
+    "/sbin/cryptkey-from-usb-mtp" 'urlenc:M%c3%a9moire%20interne%2fkey.bin'  \
+    | cryptsetup open /dev/disk/by-uuid/5163bc36 md0_crypt
 
-    # used as a standalone shell command
-    > crypttarget=md0_crypt cryptsource=/dev/disk/by-uuid/5163bc36 "/sbin/cryptkey-from-usb-mtp.sh" 'urlenc:M%c3%a9moire%20interne%2fkey.bin'
+  # a crypttab entry configuration URL encoded to prevent crashing on spaces and UTF8 chars
+  md0_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
 
-    # create an initramfs hook to copy all required files (i.e.: 'jmtpfs') in it
-    > cryptkey-from-usb-mtp.sh --initramfs-hook
+  # create an initramfs hook to copy all required files (i.e.: 'jmtpfs') in it
+  > cryptkey-from-usb-mtp --initramfs-hook
 
-    # update the content of the initramfs
-    > update-initramfs -tuck all
-    
+  # update the content of the initramfs
+  > update-initramfs -tuck all
+
+  # check that every requirements had been copied inside initramfs
+  > cryptkey-from-usb-mtp --check-initramfs
+
+  # reboot and pray hard! ^^'
+  > reboot
+  
 ```
 
 ## Author and Date
 
-Michael Bideau, the 2019-01-18
+Michael Bideau, created the 2019-01-18
 

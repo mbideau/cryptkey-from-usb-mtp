@@ -12,6 +12,9 @@
 # Author : Michael Bideau
 # Licence: GPL v3.0
 #
+# Source code, documentation and support:
+#   https://github.com/mbideau/cryptkey-from-usb-mtp
+#
 
 set -e
 
@@ -23,10 +26,10 @@ FALSE=1
 DEBUG=$FALSE
 DISPLAY_KEY_FILE=$FALSE
 MOUNT_BASE_DIR=/mnt
-CRYPTKEY_DEFAULT_REL_PATH=crypto_keyfile.bin
-KEYFILE_BAK=/crypto_keyfile.bin.disabled
+KEYFILE_BAK=/crypto_keyfile.bin
 MTP_WAIT_TIME=5
 MTP_WAIT_MAX=30
+MTP_RETRY_MOUNT_DELAY_SEC=2
 KERNEL_CACHE_ENABLED=$TRUE
 KERNEL_CACHE_MAX_SIZE_KB=32
 KERNEL_CACHE_TIMEOUT_SEC=120
@@ -37,6 +40,7 @@ INITRAMFS_PATH_DEFAULT=/boot/initrd.img-`uname -r`
 _FLAG_WAITED_FOR_DEVICE_ALREADY=/.mtp-waited-already.flag
 _MTP_DEVICE_LIST_OUT=/.mtp_device.lst.out
 _JMTPFS_ERROR_LOGFILE=/.jmtpfs.err.log
+_FLAG_MTP_DEVICES_TO_SKIP=/.mtp_device_to_skip.lst.txt
 _IFS_BAK="$IFS"
 _PRINTF="`which printf`"
 
@@ -47,7 +51,7 @@ usage()
 
 Print a key to STDOUT from a key file stored on a USB MTP device.
 
-USAGE: `basename "$0"` OPTIONS [keyfile]
+USAGE: `basename "$0"`  OPTIONS  [keyfile]
 
 ARGUMENTS:
   keyfile    optional      Is the path to a key file.
@@ -89,24 +93,32 @@ ENV:
 
 
 EXAMPLES:
-    # encoding a string to further add it to /etc/crypttab
-    > `basename "$0"` --encode 'relative/path to/key/file/on/usb/mtp/device'
+  # encoding a string to further add it to /etc/crypttab
+  > `basename "$0"` --encode 'relative/path to/key/file/on/usb/mtp/device'
 
-    # decode a URL encoded string, just to test
-    > `basename "$0"` --decode 'relative/path%20to/key/file/on/usb/mtp/device'
+  # decode a URL encoded string, just to test
+  > `basename "$0"` --decode 'relative/path%20to/key/file/on/usb/mtp/device'
 
-    # a crypttab entry configuration URL encoded to prevent crashing on spaces and UTF8 chars
-    md0_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=`realpath "$0"`,initramfs
+  # used as a standalone shell command to unlock a disk
+  > crypttarget=md0_crypt cryptsource=/dev/disk/by-uuid/5163bc36 \\
+    "`realpath "$0"`" 'urlenc:M%c3%a9moire%20interne%2fkey.bin'  \\
+    | cryptsetup open /dev/disk/by-uuid/5163bc36 md0_crypt
 
-    # used as a standalone shell command
-    > crypttarget=md0_crypt cryptsource=/dev/disk/by-uuid/5163bc36 "`realpath "$0"`" 'urlenc:M%c3%a9moire%20interne%2fkey.bin'
+  # a crypttab entry configuration URL encoded to prevent crashing on spaces and UTF8 chars
+  md0_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=`realpath "$0"`,initramfs
 
-    # create an initramfs hook to copy all required files (i.e.: 'jmtpfs') in it
-    > `basename "$0"` --initramfs-hook
+  # create an initramfs hook to copy all required files (i.e.: 'jmtpfs') in it
+  > `basename "$0"` --initramfs-hook
 
-    # update the content of the initramfs
-    > update-initramfs -tuck all
-    
+  # update the content of the initramfs
+  > update-initramfs -tuck all
+
+  # check that every requirements had been copied inside initramfs
+  > `basename "$0"` --check-initramfs
+
+  # reboot and pray hard! ^^'
+  > reboot
+  
 ENDCAT
 }
 # create the content of an initramfs-tools hook shell script
@@ -236,6 +248,56 @@ mtp_device_is_available()
 	fi
 	return $FALSE
 }
+# mount a USB MTP device
+# $1  string  the mount path
+# $2  string  the device number, i.e.: <bus_num>,<device_num>
+# $3  string  the device description (only informative)
+# return 0 (TRUE) if the device ends up mounted, else 1 (FALSE)
+mount_mtp_device()
+{
+	# create a mount point
+	if [ ! -d "$1" ]; then
+		debug "Creating mount point '$1'"
+		mkdir -p -m 0700 "$1" >/dev/null
+	fi
+
+	# if the device is not already mounted
+	if ! mount|grep -q "jmtpfs.*$1"; then
+
+		# mount the device (TODO read-only option)
+		if ! jmtpfs "$1" -device=$2 >/dev/null 2>"$_JMTPFS_ERROR_LOGFILE"; then
+			cat "$_JMTPFS_ERROR_LOGFILE" >&2
+			error "'jmtpfs' failed to mount device '$3'"
+			return $FALSE
+		else
+			debug "Mounted device '$3'"
+		fi
+
+	# already mounted
+	else
+		debug "Device '$3' is already mounted"
+	fi
+	return $TRUE
+}
+# unmount a USB MTP device
+# $1  string  the mount path
+# $2  string  the device description (only informative)
+# return 0 (TRUE) if the device ends up unmounted, else 1 (FALSE)
+unmount_mtp_device()
+{
+	# if the device is mounted
+	if mount|grep -q "jmtpfs.*$1"; then
+		debug "Unmounting device '$2'"
+		umount "$1"
+	# not mounted
+	else
+		debug "Device '$3' is already mounted"
+	fi
+	if [ -d "$1" ]; then
+		debug "Removing mount point '$1'"
+		rmdir "$1" >/dev/null||true
+	fi
+}
 # print the content of the key file specified
 use_keyfile()
 {
@@ -246,10 +308,10 @@ use_keyfile()
 		_msg="Unlocking '$crypttarget' with$_backup key file ..."
 	fi
 	info "$_msg"
-	if [ "$DEBUG" = "$TRUE" ]; then
-		debug "Hit enter to continue ..."
-		read cont >/dev/null
-	fi
+	#if [ "$DEBUG" = "$TRUE" ]; then
+	#	debug "Hit enter to continue ..."
+	#	read cont >/dev/null
+	#fi
 	cat "$1"
 }
 # fall back helper, that first try a backup key file then askpass
@@ -278,11 +340,11 @@ info()
 }
 warning()
 {
-	echo $2 "Warning: $1" >&2
+	echo $2 "WARNING: $1" >&2
 }
 error()
 {
-	echo $2 "Error: $1" >&2
+	echo $2 "ERROR: $1" >&2
 }
 
 
@@ -405,10 +467,10 @@ if [ "$KERNEL_CACHE_ENABLED" = "$TRUE" ]; then
 		# use it
 		debug "Using cached key '$_key_id' ($_k_id)"
 		info "Unlocking '$crypttarget' with cached key '$_k_id' ..."
-		if [ "$DEBUG" = "$TRUE" ]; then
-			debug "Hit enter to continue ..."
-			read cont >/dev/null
-		fi
+		#if [ "$DEBUG" = "$TRUE" ]; then
+		#	debug "Hit enter to continue ..."
+		#	read cont >/dev/null
+		#fi
 		keyctl pipe "$_k_id"
 		exit 0
 	fi
@@ -428,6 +490,11 @@ for _module in usb_common fuse; do
 	fi
 	modprobe -q $_module
 done
+
+# setup flag file to skip devices
+if ! touch "$_FLAG_MTP_DEVICES_TO_SKIP"; then
+	warning "Failed to create file '$_FLAG_MTP_DEVICES_TO_SKIP'"
+fi
 
 # wait for an MTP device to be available
 if [ ! -e "$_FLAG_WAITED_FOR_DEVICE_ALREADY" ]; then
@@ -461,45 +528,67 @@ for d in `tail -n +2 "$_MTP_DEVICE_LIST_OUT"`; do
 	_device_num="`  echo "$d"|awk -F ',' '{print $2}'|sed 's/^[[:blank:]]*//g;s/[[:blank:]]*$//g'`"
 	_product_id="`  echo "$d"|awk -F ',' '{print $3}'|sed 's/^[[:blank:]]*//g;s/[[:blank:]]*$//g'`"
 	_vendor_id="`   echo "$d"|awk -F ',' '{print $4}'|sed 's/^[[:blank:]]*//g;s/[[:blank:]]*$//g'`"
-	_product_name="`echo "$d"|awk -F ',' '{print $5}'|sed 's/^[[:blank:]]*//g;s/[[:blank:]]*$//g'`"
+	_product_name="`echo "$d"|awk -F ',' '{print $5}'|sed -e 's/^[[:blank:]]*//g;s/[[:blank:]]*$//g' -e 's/ MTP (ID[0-9]\+)$//g'`"
 	_vendor_name="` echo "$d"|awk -F ',' '{print $6}'|sed 's/^[[:blank:]]*//g;s/[[:blank:]]*$//g'`"
 
 	# get a unique mount path for this device
 	_product_name_nospace="`echo "$_product_name"|sed 's/[^a-zA-Z0-9.+ -]//g;s/[[:blank:]]\+/-/g'`"
 	_vendor_name_nospace="`echo "$_vendor_name"|sed 's/[^a-zA-Z0-9.+ -]//g;s/[[:blank:]]\+/-/g'`"
-	_mount_path="$MOUNT_BASE_DIR"/mtp--${_vendor_name_nospace}--${_product_name_nospace}--${_bus_num}-${_device_num}
+	_device_unique_id=${_vendor_name_nospace}--${_product_name_nospace}--${_bus_num}-${_device_num}
+	_mount_path="$MOUNT_BASE_DIR"/mtp--$_device_unique_id
 
-	# create a mount point
-	if [ ! -d "$_mount_path" ]; then
-		debug "Creating mount point '$_mount_path'"
-		mkdir -p -m 0700 "$_mount_path" >/dev/null
+	# device to skip
+	if grep -q "^$_device_unique_id" "$_FLAG_MTP_DEVICES_TO_SKIP"; then
+		debug "Skipping device '${_vendor_name}, ${_product_name}'"
+		continue
 	fi
 
-	# if the device is not already mounted
-	if ! mount|grep -q "jmtpfs.*$_mount_path"; then
-
-		# mount the device
-		if ! jmtpfs "$_mount_path" -device=${_bus_num},${_device_num} >/dev/null 2>"$_JMTPFS_ERROR_LOGFILE"; then
-			cat "$_JMTPFS_ERROR_LOGFILE" >&2
-			error "'jmtpfs' failed to mount device '${_vendor_name}, ${_product_name}', ignoring"
-		else
-			debug "Mounted device '${_vendor_name}, ${_product_name}'"
-		fi
-
-	# already mounted
-	else
-		debug "Device '${_vendor_name}, ${_product_name}' is already mounted"
+	# mount the device
+	if ! mount_mtp_device "$_mount_path" "${_bus_num},${_device_num}" "${_vendor_name}, ${_product_name}"; then
+		debug "Ignoring mount failure, moving on"
 	fi
 
-	# check that we can access the filesystem of the device
-	while ! ls -alh "$_mount_path" >/dev/null 2>&1; do
+	# no access to the device's filesystem
+	if ! ls -alh "$_mount_path" >/dev/null 2>&1; then
 		debug "Device's filesystem is not accessible"
+
+		# assuming the device is locked (and need user manual unlocking)
+		# so ask the user to do so, and wait for its input to continue or skip
 		info "Please unlock the device '${_vendor_name}, ${_product_name}', then hit enter ... (or hit 's' to skip)"
 		read unlocked >/dev/null
+
+		# skip unlocking (give up)
 		if [ "$unlocked" = 's' -o "$unlocked" = 'S' ]; then
-			break
+			info "Skipping unlocking device '${_vendor_name}, ${_product_name}'"
+
+		# device should be unlocked
+		else
+			sleep 1
+
+			# stil no access
+			if ! ls -alh "$_mount_path" >/dev/null 2>&1; then
+
+				# try unmounting/mounting
+				unmount_mtp_device "$_mount_path"  "${_vendor_name}, ${_product_name}"
+				debug "Waiting ${MTP_RETRY_MOUNT_DELAY_SEC}s"
+				sleep $MTP_RETRY_MOUNT_DELAY_SEC
+				mount_mtp_device "$_mount_path" "${_bus_num},${_device_num}" "${_vendor_name}, ${_product_name}"||true
+			fi
 		fi
-	done
+	fi
+
+	# filesystem is accessible
+	if ls -alh "$_mount_path" >/dev/null 2>&1; then
+		debug "Device's filesystem is accessible"
+
+	# no access => give up
+	else
+		warning "Filesystem of device '${_vendor_name}, ${_product_name}' is not accessible"
+		warning "Skipping device '${_vendor_name}, ${_product_name}'"
+		echo "$_device_unique_id" >> "$_FLAG_MTP_DEVICES_TO_SKIP"
+		unmount_mtp_device "$_mount_path"  "${_vendor_name}, ${_product_name}"
+		continue
+	fi
 
 	# try to get the key file
 	_keyfile_path="$_mount_path"/"$CRYPTTAB_KEY"
@@ -552,9 +641,7 @@ for d in `tail -n +2 "$_MTP_DEVICE_LIST_OUT"`; do
 		use_keyfile "$_keyfile_path"
 
 		# umount the device
-		debug "Unmounting device '${_vendor_name}, ${_product_name}'"
-		umount "$_mount_path"
-		rmdir "$_mount_path" >/dev/null||true
+		unmount_mtp_device "$_mount_path"  "${_vendor_name}, ${_product_name}"
 
 		# stop process
 		exit 0
@@ -564,9 +651,7 @@ for d in `tail -n +2 "$_MTP_DEVICE_LIST_OUT"`; do
 	fi
 
 	# umount the device
-	debug "Unmounting device '${_vendor_name}, ${_product_name}'"
-	umount "$_mount_path"
-	rmdir "$_mount_path" >/dev/null||true
+	unmount_mtp_device "$_mount_path"  "${_vendor_name}, ${_product_name}"
 
 	# next device
 	IFS="
