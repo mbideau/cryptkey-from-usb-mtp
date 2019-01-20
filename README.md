@@ -12,26 +12,26 @@ USB MTP devices are usually _Android_ smartphones. To know more about the _Media
 
 On the plus side:
 
-:small_blue_diamond: **Possession factor**: you already have it with you, all the time (I'm sure :yum:), no need for an extra USB key
-:small_blue_diamond: **Knowledge factor**: the smartphone is locked by a PIN code or a drawing (if it is a modern one)
+:small_blue_diamond: **Possession factor**: you already have it with you, all the time (I'm sure :yum:), no need for an extra USB key  
+:small_blue_diamond: **Knowledge factor**: the smartphone is locked by a PIN code or a drawing (if it is a modern one)  
 
 On the down side:
 
-:small_orange_diamond: a smartphone is an active connected device which might be hacked remotely, by an evil application, or the proprietary OS
-:small_orange_diamond: to use this feature you need to let the `/boot` partition unencrypted (like most _grub_ advanced features)
+:small_orange_diamond: a smartphone is an active connected device which might be hacked remotely, by an evil application, or the proprietary OS  
+:small_orange_diamond: to use this feature you need to let the `/boot` partition unencrypted (like most _grub_ advanced features)  
 
 To lower the aspect of the two downside mentionned above:
 
-- If your smartphone is already hacked, you're screwed anyway :shit:
-- If someone with expert hacking skills (i.e.: tweaking an initramfs) have a physical access to your computer, you're also screwed!
+:small_orange_diamond: If your smartphone is already hacked, you're screwed anyway :shit:  
+:small_orange_diamond: If someone with expert hacking skills (i.e.: tweaking an initramfs) have a physical access to your computer, you're also screwed!  
 
 An evil hacker :trollface: needs to know the following in order to perform a successfull decrypting of your hard disk without your help:
 
-:black_small_square: your partitions are encrypted
-:black_small_square: you use this special script to unlock it with your phone
-:black_small_square: the PIN code of the phone to access the file and **stealing your phone** (or hacking it)
-:black_small_square: which file is the keyfile in the phone filesystem (you should use a file looking like noting fancy/obvious)
-:black_small_square: eventually the vendor ID and product ID to mimic your phone with another USB device (if you have enabled the whitelist filter security)
+:black_small_square: your partitions are encrypted  
+:black_small_square: you use this special script to unlock it with your phone  
+:black_small_square: the PIN code of the phone to access the file and **stealing your phone** (or hacking it)  
+:black_small_square: which file is the keyfile in the phone filesystem (you should use a file looking like noting fancy/obvious)  
+:black_small_square: eventually the vendor ID and product ID to mimic your phone with another USB device (if you have enabled the whitelist filter security)  
 
 So, in case of a stolen computer it is a very good/acceptable solution :closed_lock_with_key:, otherwise (physical access by geeks) not so much.
 
