@@ -1,39 +1,39 @@
-# cryptkey-from-usb-mtp
+# cryptkey-from-usb-mtp: :ipĥone: > :closed_lock_with_key: > :computer: > :tada: > :rainbow: > 
 
-Have a good protection againt computer thief (physical) by encrypting your hard drive and using your smartphone to unlock it.
+Have a good protection against computer thief (physical) by encrypting your hard drive and using your smartphone to unlock it.  
 It is a [Two-factor authentication (2FA)](https://en.wikipedia.org/wiki/Multi-factor_authentication) providing increased security without pain (password less) or extra cost (no more USB key).
 
 This script reads a key file from a USB [MTP](https://en.wikipedia.org/wiki/Media_Transfer_Protocol) device (with fallback to _askpass_), meant for unlocking encrypted hard drive with *[cryptsetup](https://wiki.debian.org/CryptsetupDebug)* and _[crypttab](https://manpages.debian.org/stable/cryptsetup/crypttab.5.en.html)_ in *[initramfs](https://wiki.debian.org/initramfs)*.
 
-USB MTP devices are usually _Android_ smartphones. To know more about the _Media Transfer Protocol_ see its [Wikipedia page](https://en.wikipedia.org/wiki/Media_Transfer_Protocol)*).
+USB MTP devices are usually _Android_ smartphones. To know more about the _Media Transfer Protocol_ see its [Wikipedia page](https://en.wikipedia.org/wiki/Media_Transfer_Protocol).
 
 
 ## Using your smartphone as a keyfile medium is a good security compromise
 
 On the plus side:
 
-* **Possession factor**: you already have it with you, all the time (I'm sure :-P), no need for an extra USB key
-* **Knowledge factor**: the smartphone is locked by a PIN code or a drawing (if it is a modern one)
+:small_blue_diamond: **Possession factor**: you already have it with you, all the time (I'm sure :yum:), no need for an extra USB key
+:small_blue_diamond: **Knowledge factor**: the smartphone is locked by a PIN code or a drawing (if it is a modern one)
 
 On the down side:
 
-- a smartphone is an active connected device which might be hacked remotely, by an evil application, or the proprietary OS
-- to use this feature you need to let the `/boot` partition unencrypted (like most _grub_ advanced features)
+:small_orange_diamond: a smartphone is an active connected device which might be hacked remotely, by an evil application, or the proprietary OS
+:small_orange_diamond: to use this feature you need to let the `/boot` partition unencrypted (like most _grub_ advanced features)
 
-To lower the risk of the two downside mentionned above:
+To lower the aspect of the two downside mentionned above:
 
-- If your smartphone is already hacked, you're screwed anyway :-P
+- If your smartphone is already hacked, you're screwed anyway :shit:
 - If someone with expert hacking skills (i.e.: tweaking an initramfs) have a physical access to your computer, you're also screwed!
 
-An evil hacker needs to know the following in order to perform a successfull decrypting of your hard disk without your help:
+An evil hacker :trollface: needs to know the following in order to perform a successfull decrypting of your hard disk without your help:
 
-* your partitions are encrypted
-* you use this special script to unlock it with your phone
-* the PIN code of the phone to access the file and **stealing your phone** (or hacking it)
-* which file is the keyfile in the phone filesystem (you should use a file looking like noting fancy/obvious)
-* eventually the vendor ID and product ID to mimic your phone with another USB device (if you have enabled the whitelist filter security)
+:black_small_square: your partitions are encrypted
+:black_small_square: you use this special script to unlock it with your phone
+:black_small_square: the PIN code of the phone to access the file and **stealing your phone** (or hacking it)
+:black_small_square: which file is the keyfile in the phone filesystem (you should use a file looking like noting fancy/obvious)
+:black_small_square: eventually the vendor ID and product ID to mimic your phone with another USB device (if you have enabled the whitelist filter security)
 
-So, in case of a stolen computer it is a very good/acceptable solution, otherwise (physical access by geeks) not so much.
+So, in case of a stolen computer it is a very good/acceptable solution :closed_lock_with_key:, otherwise (physical access by geeks) not so much.
 
 
 ## Requirements
@@ -278,7 +278,7 @@ Mount the root partition (and all others paritions into it)
 ```sh
 mount /dev/mapper/vda1_crypt /root
 ```
-*Replace 'vda1' with the name of your patition and do not forget to add mount required options with '-o OPTIONS'.*
+*Replace 'vda1' with the name of your patition and do not forget to add mount required options with '-o OPTIONS'.*  
 **Note: '/root' is the default root filesystem target directory for Debian initramfs, but you can use any directory you want.**
 
 Mount system's partitions
@@ -293,7 +293,7 @@ Then you have 2 options:
 1. exit the initramfs shell, and the boot process should continue successfully  
 2. chroot into the root filesystem with `chroot /root /bin/bash`
 
-Once in logged in (or into) the root filesystem, do your modifications, then update the initramfs, check it and reboot
+Once logged in (or into) the root filesystem, do your modifications, then update the initramfs, check it and reboot
 ```sh
 update-initramfs -tuck all && cryptkey-from-usb-mtp --check-initramfs && reboot
 ```
