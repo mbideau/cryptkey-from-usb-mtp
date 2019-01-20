@@ -311,7 +311,7 @@ filter_devices()
                     sed -e '/^[[:blank:]]*$/d' -e '/^[[:blank:]]*#/d' "$1" | while read _line; do
                         _product_id="`  echo "$_line"|awk -F ',' '{print $3}'|trim`"
                         _vendor_id="`   echo "$_line"|awk -F ',' '{print $4}'|trim`"
-                        _product_name="`echo "$_line"|awk -F ',' '{print $5}'|trim|sed 's/ MTP (ID[0-9]\+)$//g'`"
+                        _product_name="`echo "$_line"|awk -F ',' '{print $5}'|trim|simplify_name`"
                         _vendor_name="` echo "$_line"|awk -F ',' '{print $6}'|trim`"
 
             _device_in_filter_list="`grep -q "^[[:space:]]*$_vendor_id[[:space:]]*[;,|	][[:space:]]*$_product_id\([[:space:]]\+\|$\)" "$MTP_FILTER_FILE"; echo $?`"
@@ -383,8 +383,8 @@ mount_mtp_device()
     # if the device is not already mounted
     if ! mount|grep -q "jmtpfs.*$1"; then
 
-        # mount the device (TODO read-only option)
-        if ! jmtpfs "$1" -device=$2 >/dev/null 2>"$_JMTPFS_ERROR_LOGFILE"; then
+        # mount the device (read-only)
+        if ! jmtpfs "$1" -o ro -device=$2 >/dev/null 2>"$_JMTPFS_ERROR_LOGFILE"; then
             cat "$_JMTPFS_ERROR_LOGFILE" >&2
             error "'jmtpfs' failed to mount device '$3'"
             return $FALSE
@@ -446,6 +446,11 @@ fallback()
 trim()
 {
     echo "$1"|sed 's/^[[:blank:]]*//g;s/[[:blank:]]*$//g'
+}
+# remove useless words in device name string
+simplify_name()
+{
+    echo "$1"|sed 's/[[:blank:]]*\(MTP\|ID[0-9]\+\)[[:blank:]]*//g;s/[[:blank:]]*([^)]\+)[[:blank:]]*$//g'
 }
 # helper function to print messages
 debug()
@@ -662,7 +667,7 @@ fi
     _device_num="`  echo "$_line"|awk -F ',' '{print $2}'|trim`"
     _product_id="`  echo "$_line"|awk -F ',' '{print $3}'|trim`"
     _vendor_id="`   echo "$_line"|awk -F ',' '{print $4}'|trim`"
-    _product_name="`echo "$_line"|awk -F ',' '{print $5}'|trim|sed 's/ MTP (ID[0-9]\+)$//g'`"
+    _product_name="`echo "$_line"|awk -F ',' '{print $5}'|trim|simplify_name`"
     _vendor_name="` echo "$_line"|awk -F ',' '{print $6}'|trim`"
 
     # get a unique mount path for this device
