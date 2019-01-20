@@ -1,4 +1,4 @@
-# cryptkey-from-usb-mtp: :iphone: > :closed_lock_with_key: > :computer: > :tada: > :rainbow: > :neckbeard:
+# cryptkey-from-usb-mtp: :iphone: > :closed_lock_with_key: > :computer: > :tada: > :rainbow:
 
 Have a good protection against computer thief (physical) by encrypting your hard drive and using your smartphone to unlock it.  
 It is a [Two-factor authentication (2FA)](https://en.wikipedia.org/wiki/Multi-factor_authentication) providing increased security without pain (password less) or extra cost (no more USB key).
