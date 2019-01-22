@@ -116,7 +116,7 @@ sudo cryptsetup close secret_key_decrypted
 **Note: if you want to be able to use the caching mecanism, you must use a key file which size is less than 1059KiB (LUKS header included).**  
 Then adjust the `/etc/crypttab` third entry to use 'pass:'
 ```sh
-vda1_crypt  UUID=5163bc36 'pass:secret_key.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
+vda1_crypt  UUID=5163bc36 'pass:secret_key.enc' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
 ```
 *Replace 'vda1_crypt' with the device mapper name you want (same as your encrypted drive plus suffix '_crypt' is common).*
 
@@ -291,10 +291,9 @@ update-initramfs -tuck all && cryptkey-from-usb-mtp --check-initramfs && reboot
 
 **Note: instead of editing the shell script directly you might better edit the hook script to modify included script in initramfs.**
 
-In the file `/etc/initramfs-tools/hook/cryptkey-from-usb-mtp` after the lines
+In the file `/etc/initramfs-tools/hook/cryptkey-from-usb-mtp` after the line
 ```sh
-copy_file 'file' "/sbin/cryptkey-from-usb-mtp"
-[ \$? -le 1 ] || exit 2
+copy_file 'file' "/sbin/cryptkey-from-usb-mtp"; [ $? -le 1 ] || exit 2
 ```
 add the following
 ```sh
