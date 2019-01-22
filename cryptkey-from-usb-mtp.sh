@@ -9,6 +9,7 @@
 #   * using an alternative "backup" keyfile
 #   * falling back to 'askpass'
 #   * filtering MTP devices by whitelist/blacklist
+#   * using a passphrase protected key (decrypted with cryptsetup)
 # 
 # Author : Michael Bideau
 # Licence: GPL v3.0
@@ -47,7 +48,7 @@ _FLAG_WAITED_FOR_DEVICE_ALREADY=/.mtp-waited-already.flag
 _MTP_DEVICE_LIST_OUT=/.mtp_device.lst.out
 _JMTPFS_ERROR_LOGFILE=/.jmtpfs.err.log
 _FLAG_MTP_DEVICES_TO_SKIP=/.mtp_device_to_skip.lst.txt
-_IFS_BAK="$IFS"
+_PASSPHRASE_PROTECTED=$FALSE
 _PRINTF="`which printf`"
 
 # usage
@@ -67,6 +68,11 @@ ARGUMENTS:
                            It is relative to the device mount point/dir.
                            Quotes ['"] will be removed at the begining and end.
                            If it starts with 'urlenc:' it will be URL decoded.
+                           If it starts with 'pass:' it will be decrypted with
+                           'cryptsetup open' on the file.
+                           'urlenc: and 'pass:' can be combined in any order, 
+                           i.e.: 'urlenc:pass:De%20toute%20beaut%c3%a9.jpg'
+                              or 'pass:urlenc:De%20toute%20beaut%c3%a9.jpg'.
 OPTIONS:
 
   -h|--help                Display this help.
@@ -99,7 +105,7 @@ ENV:
                            The env var is optional if the argument 'keyfile'
                            is specified, required otherwise.
                            Same process apply as for the 'keyfile' argument,
-                           i.e.: removing quotes and URL decoding.
+                           i.e.: removing quotes, URL decoding and decrypting.
 
   cryptsource              (informative only) The disk source to unlock.
 
@@ -133,6 +139,9 @@ EXAMPLES:
 
   # a crypttab entry configuration URL encoded to prevent crashing on spaces and UTF8 chars
   md0_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=`realpath "$0"`,initramfs
+
+  # a crypttab entry configuration URL encoded and passphrase protected
+  md0_crypt  UUID=5163bc36 'urlenc:pass:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=`realpath "$0"`,initramfs
 
   # create an initramfs hook to copy all required files (i.e.: 'jmtpfs') in it
   > `basename "$0"` --initramfs-hook
@@ -314,11 +323,11 @@ filter_devices()
                         _product_name="`echo "$_line"|awk -F ',' '{print $5}'|trim|simplify_name`"
                         _vendor_name="` echo "$_line"|awk -F ',' '{print $6}'|trim`"
 
-            _device_in_filter_list="`grep -q "^[[:space:]]*$_vendor_id[[:space:]]*[;,|	][[:space:]]*$_product_id\([[:space:]]\+\|$\)" "$MTP_FILTER_FILE"; echo $?`"
+                        _device_in_filter_list="`grep -q "^[[:space:]]*$_vendor_id[[:space:]]*[;,|	][[:space:]]*$_product_id\([[:space:]]\+\|$\)" "$MTP_FILTER_FILE"; echo $?`"
 
-            # allowed devices are:
+                        # allowed devices are:
                         #   whitelist and device is listed
-            #   or blacklist and device is not listed
+                        #   or blacklist and device is not listed
                         if [ "$MTP_FILTER_STRATEGY" = "whitelist" -a "$_device_in_filter_list" = "$TRUE" ] \
                         || [ "$MTP_FILTER_STRATEGY" = "blacklist" -a "$_device_in_filter_list" = "$FALSE" ]; then
                             debug "Allowing device '$_vendor_name, $_product_name' ($MTP_FILTER_STRATEGY filter)"
@@ -432,6 +441,8 @@ use_keyfile()
 # fall back helper, that first try a backup key file then askpass
 fallback()
 {
+    debug "Fallback"
+
     # use backup keyfile (if exists)
     if [ -e "$KEYFILE_BAK" ]; then
         use_keyfile "$KEYFILE_BAK"
@@ -440,17 +451,20 @@ fallback()
 
     # fall back to askpass (to manually unlock the device)
     /lib/cryptsetup/askpass "Please manually enter key to unlock disk '$crypttarget'"
+    
     exit 0
 }
 # remove spaces at the begining and end of a string
+# meant to be used with a piped input
 trim()
 {
-    echo "$1"|sed 's/^[[:blank:]]*//g;s/[[:blank:]]*$//g'
+    sed 's/^[[:blank:]]*//g;s/[[:blank:]]*$//g'
 }
 # remove useless words in device name string
+# meant to be used with a piped input
 simplify_name()
 {
-    echo "$1"|sed 's/[[:blank:]]*\(MTP\|ID[0-9]\+\)[[:blank:]]*//g;s/[[:blank:]]*([^)]\+)[[:blank:]]*$//g'
+    sed 's/[[:blank:]]*\(MTP\|ID[0-9]\+\)[[:blank:]]*//g;s/[[:blank:]]*([^)]*)[[:blank:]]*$//g'
 }
 # helper function to print messages
 debug()
@@ -561,7 +575,14 @@ if [ "$CRYPTTAB_KEY" != '' ]; then
         CRYPTTAB_KEY="`echo "$CRYPTTAB_KEY"|sed 's/^["'"'"']*//g;s/["'"'"']*$//g'`"
     fi
 
-    # decode (if encoded)
+    # passphrase protected
+    if echo "$CRYPTTAB_KEY"|grep -q '^\(urlenc:\)\?pass:'; then
+        CRYPTTAB_KEY="`echo "$CRYPTTAB_KEY"|sed 's/^\(urlenc:\)\?pass:/\1/g'`"
+        _PASSPHRASE_PROTECTED=$TRUE
+        debug "Key will be passphrase protected"
+    fi
+
+    # URL decode (if encoded)
     if echo "$CRYPTTAB_KEY"|grep -q '^urlenc:'; then
         CRYPTTAB_KEY="`echo "$CRYPTTAB_KEY"|sed 's/^urlenc://g'`"
         CRYPTTAB_KEY="`urldecode "$CRYPTTAB_KEY"`"
@@ -624,7 +645,7 @@ fi
 
 # ensure usb_common and fuse modules are runing
 for _module in usb_common fuse; do
-    if [ "`modprobe -nv $_module`" != '' ]; then
+    if [ "`modprobe -nv $_module 2>&1||true`" != '' ]; then
         debug "Loading kernel module '$_module'"
     fi
     modprobe -q $_module
@@ -658,6 +679,9 @@ else
     debug "Not waiting for MTP device (already done once)"
 fi
 
+# create a file in order to catch the result of the subshell
+_result_file="`mktemp`"
+
 # for every MTP device
 { cat "$_MTP_DEVICE_LIST_OUT" | while read _line; do
     debug "Device line: '$_line'"
@@ -678,13 +702,14 @@ fi
 
     # device to skip
     if grep -q "^$_device_unique_id" "$_FLAG_MTP_DEVICES_TO_SKIP"; then
-        debug "Skipping device '${_vendor_name}, ${_product_name}'"
+        debug "Skipping device '${_vendor_name}, ${_product_name}' (listed as skipped already)"
         continue
     fi
 
     # mount the device
     if ! mount_mtp_device "$_mount_path" "${_bus_num},${_device_num}" "${_vendor_name}, ${_product_name}"; then
-        debug "Ignoring mount failure, moving on"
+        debug "Skipping device '${_vendor_name}, ${_product_name}' (mount failure)"
+        continue
     fi
 
     # no access to the device's filesystem
@@ -693,7 +718,7 @@ fi
 
         # assuming the device is locked (and need user manual unlocking)
         # so ask the user to do so, and wait for its input to continue or skip
-        info "Please unlock the device '${_vendor_name}, ${_product_name}', then hit enter ... (or hit 's' to skip)"
+        info "Please unlock the device '${_vendor_name}, ${_product_name}', then hit enter ... ('s' to skip)"
         read unlocked >/dev/null <&3
 
         # skip unlocking (give up)
@@ -722,7 +747,7 @@ fi
     # no access => give up
     else
         warning "Filesystem of device '${_vendor_name}, ${_product_name}' is not accessible"
-        warning "Skipping device '${_vendor_name}, ${_product_name}'"
+        warning "Skipping device '${_vendor_name}, ${_product_name}' (filesystem unaccessible)"
         echo "$_device_unique_id" >> "$_FLAG_MTP_DEVICES_TO_SKIP"
         unmount_mtp_device "$_mount_path"  "${_vendor_name}, ${_product_name}"
         continue
@@ -738,24 +763,64 @@ fi
     # key file found
     if [ "$_keyfile_path" != '' -a -e "$_keyfile_path" ]; then
         debug "Found cryptkey at '$_keyfile_path'"
+        _keyfile_to_use="$_keyfile_path"
+
+        # passphrase protected
+        if [ "$_PASSPHRASE_PROTECTED" = "$TRUE" ]; then
+
+            # ensure loop module is loaded
+            if [ "`modprobe -nv 'loop' 2>&1||true`" != '' ]; then
+                debug "Loading kernel module 'loop'"
+            fi
+            modprobe -q loop
+
+            # name the device mapper
+            _device_mapper_name="`basename "$_keyfile_path"|sed -e 's/\./-/g' -e 's/[^a-zA-Z0-9_+ -]//g;s/[[:blank:]]\+/-/g'`_crypt"
+            debug "Device mapper name is: '$_device_mapper_name'"
+
+            # ask for passphrase
+            _key_decrypted=$FALSE
+            debug "Key is passphrase protected, so trying to decrypt it by asking the user"
+            if ! cryptsetup open --readonly "$_keyfile_path" "$_device_mapper_name" >/dev/null <&3; then
+                error "Failed to decrypt key '`basename "$_keyfile_path"`' with cryptsetup"
+            elif [ ! -e "/dev/mapper/$_device_mapper_name" ]; then
+                error "Key decrypted but device mapper '/dev/mapper/$_device_mapper_name' doesn't exists! Bug?"
+            else
+                debug "Key successfully decrypted"
+                _key_decrypted=$TRUE
+            fi
+
+            # failed to decrypt the key
+            if [ "$_key_decrypted" != "$TRUE" ]; then
+
+                # umount the device
+                unmount_mtp_device "$_mount_path"  "${_vendor_name}, ${_product_name}"
+
+                # move on
+                continue
+            fi
+
+            # register the new path
+            _keyfile_to_use="/dev/mapper/$_device_mapper_name"
+        fi
 
         # cache the key
         if [ "$KERNEL_CACHE_ENABLED" = "$TRUE" ]; then
-            _k_id="`cat "$_keyfile_path"|keyctl padd user "$_key_id" @u||true`"
+            _k_id="`cat "$_keyfile_to_use"|keyctl padd user "$_key_id" @u||true`"
 
             # caching failed
             if [ "$_k_id" = '' ]; then
                 warning "Failed to add key '$_key_id' to kernel cache"
 
                 # it might be because the data content exceeds the cache max size
-                _key_content_size="`du -sk "$_keyfile_path"|awk '{print $1}'||true`"
-                if [ "$_key_content_size" != '' -a "$_key_content_size" -gt "$KERNEL_CACHE_MAX_SIZE_KB" ]; then
+                _key_content_size="`du -sk "$_keyfile_to_use"|awk '{print $1}'||true`"
+                if [ "$_key_content_size" != '' -a "$_key_content_size" -ge "$KERNEL_CACHE_MAX_SIZE_KB" ]; then
                     warning "Key content size '$_key_content_size' exceeds cache max size of '$KERNEL_CACHE_MAX_SIZE_KB'"
                     warning "The content for key '$_key_id' cannot be cached"
                 elif [ "$_key_content_size" != '' ]; then
                     error "Uh, I do not understand the cause of failure (bug?), sorry"
                 else
-                    error "Failed to get file size of '$_keyfile_path'"
+                    error "Failed to get file size of '$_keyfile_to_use'"
                 fi
             fi
 
@@ -776,7 +841,16 @@ fi
         fi
 
         # use the key file
-        use_keyfile "$_keyfile_path"
+        use_keyfile "$_keyfile_to_use"
+        echo "$TRUE" > "$_result_file"
+
+        # passphrase protected and key file is a device mapped
+        if [ "$_PASSPHRASE_PROTECTED" = "$TRUE" ] && echo "$_keyfile_to_use"|grep -q '^/dev/mapper/'; then
+
+            # close the device mapper
+            debug "Closing the device mapper '$_keyfile_to_use'"
+            cryptsetup close "$_keyfile_to_use"
+        fi
 
         # umount the device
         unmount_mtp_device "$_mount_path"  "${_vendor_name}, ${_product_name}"
@@ -794,7 +868,14 @@ fi
     # next device
 done } 3<&0
 
-# fall back
-fallback
+# failed to get a key
+if [ ! -e "$_result_file" -o "`head -n 1 "$_result_file"|trim`" != "$TRUE" ]; then
+    debug "Failed to get a key"
+    rm -f "$_result_file"||true
+
+    # fall back
+    fallback
+fi
+rm -f "$_result_file"||true
 
 # vim: set ft=sh ts=4 sw=4 expandtab

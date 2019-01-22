@@ -13,7 +13,7 @@ USB MTP devices are usually _Android_ smartphones. To know more about the _Media
 On the plus side:
 
 :small_blue_diamond: **Possession factor**: you already have it with you, all the time (I'm sure :yum:), no need for an extra USB key  
-:small_blue_diamond: **Knowledge factor**: the smartphone is locked by a PIN code or a drawing (if it is a modern one)  
+:small_blue_diamond: **Knowledge factor**: the smartphone is locked by a PIN code or a drawing (if it is a modern one) or you can use an encrypted keyfile 
 
 On the down side:
 
@@ -71,10 +71,10 @@ sudo chmod +x /sbin/cryptkey-from-usb-mtp
 
 Create or choose a file to be your key file
 ```sh
-dd if=/dev/urandom of=/mnt/mtp-device/secret_key.bin bs=1kB count=30
+dd if=/dev/urandom of=/mnt/mtp-device/secret_key.bin bs=1KiB count=31
 ```
 *Replace '/mnt/mtp-device/secret_key.bin' with the path to the key file in your mounted USB MTP device's filesystem.*  
-**Note: if you want to be able to use the caching mecanism, you must use a key file which size is less than 32kB.**
+**Note: if you want to be able to use the caching mecanism, you must use a key file which size is less than 32KiB.**
 
 And add it to your luks devices
 ```sh
@@ -85,6 +85,38 @@ sudo cryptsetup luksAddKey /dev/vda1 /mnt/mtp-device/secret_key.bin
 Adjust the `/etc/crypttab` entries accordingly (See [documentation](https://manpages.debian.org/stable/cryptsetup/crypttab.5.en.html))
 ```sh
 vda1_crypt  UUID=5163bc36 'secret_key.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
+```
+*Replace 'vda1_crypt' with the device mapper name you want (same as your encrypted drive plus suffix '_crypt' is common).*
+*Use a path relative to the MTP device filesystem in the third column.*
+
+To prevent messing with spaces and non-ascii chars, you can urlencode the path to the keyfile with the command:
+```sh
+cryptkey-from-usb-mtp --encode "Mémoire interne de stockage/Mon fichier très secret.bin"
+```
+Then adjust the `/etc/crypttab` third entry to use 'urlenc:'
+```sh
+vda1_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%20de%20stockage%2fMon%20fichier%20tr%c3%a8s%20secret.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
+```
+
+To use an encrypted key instead of a regular file, create it with:
+```sh
+# container file
+dd if=/dev/urandom of=/mnt/mtp-device/secret_key.enc bs=1KiB count=1059
+# encrypt the file
+cryptsetup luksformat --align-payload 1 /mnt/mtp-device/secret_key.enc
+# open it
+sudo cryptsetup open /mnt/mtp-device/secret_key.enc secret_key_decrypted
+# add it to your luks devices
+sudo cryptsetup luksAddKey /dev/vda1 /dev/mapper/secret_key_decrypted
+# close it
+sudo cryptsetup close secret_key_decrypted
+```
+*Replace '/mnt/mtp-device/secret_key.enc' with the path to the key file in your mounted USB MTP device's filesystem.*  
+*Replace '/dev/vda1' with your encrypted drive and '/mnt/mtp-device/secret_key.enc' with your key file path (as above).*  
+**Note: if you want to be able to use the caching mecanism, you must use a key file which size is less than 1059KiB (LUKS header included).**  
+Then adjust the `/etc/crypttab` third entry to use 'pass:'
+```sh
+vda1_crypt  UUID=5163bc36 'pass:secret_key.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
 ```
 *Replace 'vda1_crypt' with the device mapper name you want (same as your encrypted drive plus suffix '_crypt' is common).*
 
@@ -134,6 +166,11 @@ ARGUMENTS:
                            It is relative to the device mount point/dir.
                            Quotes ['"] will be removed at the begining and end.
                            If it starts with 'urlenc:' it will be URL decoded.
+                           If it starts with 'pass:' it will be decrypted with
+                           'cryptsetup open' on the file.
+                           'urlenc: and 'pass:' can be combined in any order, 
+                           i.e.: 'urlenc:pass:De%20toute%20beaut%c3%a9.jpg'
+                              or 'pass:urlenc:De%20toute%20beaut%c3%a9.jpg'.
 OPTIONS:
 
   -h|--help                Display this help.
@@ -166,7 +203,7 @@ ENV:
                            The env var is optional if the argument 'keyfile'
                            is specified, required otherwise.
                            Same process apply as for the 'keyfile' argument,
-                           i.e.: removing quotes and URL decoding.
+                           i.e.: removing quotes, URL decoding and decrypting.
 
   cryptsource              (informative only) The disk source to unlock.
 
@@ -181,8 +218,8 @@ FILES:
   /etc/initramfs-tools/hooks/cryptkey-from-usb-mtp
                            The default path to initramfs hook
 
-  /etc/cryptkey-from-usb-mtp/devices.*list
-                           The path to a list of filtered devices (whitelist/blacklist).
+  /etc/cryptkey-from-usb-mtp/devices.blacklist
+                           The path to a list of filtered devices (whitelist/blacklist)
 
 
 EXAMPLES:
@@ -200,6 +237,9 @@ EXAMPLES:
 
   # a crypttab entry configuration URL encoded to prevent crashing on spaces and UTF8 chars
   md0_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
+
+  # a crypttab entry configuration URL encoded and passphrase protected
+  md0_crypt  UUID=5163bc36 'urlenc:pass:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
 
   # create an initramfs hook to copy all required files (i.e.: 'jmtpfs') in it
   > cryptkey-from-usb-mtp --initramfs-hook
@@ -283,10 +323,10 @@ mount /dev/mapper/vda1_crypt /root
 
 Mount system's partitions
 ```sh
-mount --rbind /proc    /root/proc
-mount --rbind /sys     /root/sys
-mount --rbind /dev     /root/dev
-mount --rbind /dev/pts /root/dev/pts
+mount --bind /proc    /root/proc
+mount --bind /sys     /root/sys
+mount --bind /dev     /root/dev
+mount --bind /dev/pts /root/dev/pts
 ```
 
 Then you have 2 options:
