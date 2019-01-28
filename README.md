@@ -337,6 +337,13 @@ Once logged in (or into) the root filesystem, do your modifications, then update
 update-initramfs -tuck all && cryptkey-from-usb-mtp --check-initramfs && reboot
 ```
 
+### TODO
+
+- [ ] add locales like for "luksFormat":https://salsa.debian.org/cryptsetup-team/cryptsetup/tree/master/debian/scripts/po (and do the French translation of luksFormat while at it)
+- [ ] build a test suite (using virtualisation to do many runs and check boot success)
+- [ ] contact Debian cryptsetup team to ask to add the script to "their repo":https://salsa.debian.org/cryptsetup-team/cryptsetup/tree/master/debian/scripts
+- [ ] contact other distro (Arch) to ask for integration (Dracut maybe)
+- [ ] start a communication campaign (if the feedbacks are positives enough)
 
 ## Author and Date
 
