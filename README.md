@@ -1,151 +1,241 @@
 # cryptkey-from-usb-mtp: :iphone: > :closed_lock_with_key: > :computer: > :tada: > :rainbow:
 
-Have a good protection against computer thief (physical) by encrypting your hard drive and using your smartphone to unlock it.  
-It is a [Two-factor authentication (2FA)](https://en.wikipedia.org/wiki/Multi-factor_authentication) providing increased security without pain (password less) or extra cost (no more USB key).
+Have a good protection against computer thief (physical) by encrypting your hard
+drive and using your smartphone to unlock it.  
+It is a [Two-factor authentication (2FA)](https://en.wikipedia.org/wiki/Multi-factor_authentication)
+providing increased security without pain (password less) or extra cost (no USB
+key required).
 
-This script reads a key file from a USB [MTP](https://en.wikipedia.org/wiki/Media_Transfer_Protocol) device (with fallback to _askpass_), meant for unlocking encrypted hard drive with *[cryptsetup](https://wiki.debian.org/CryptsetupDebug)* and _[crypttab](https://manpages.debian.org/stable/cryptsetup/crypttab.5.en.html)_ in *[initramfs](https://wiki.debian.org/initramfs)*.
+This shell script reads a key file from a USB 
+[MTP](https://en.wikipedia.org/wiki/Media_Transfer_Protocol) device (with
+fallback to _askpass_), meant for unlocking encrypted hard drive with
+*[cryptsetup](https://wiki.debian.org/CryptsetupDebug)* and
+_[crypttab](https://manpages.debian.org/stable/cryptsetup/crypttab.5.en.html)_
+in *[initramfs](https://wiki.debian.org/initramfs)*.
 
-USB MTP devices are usually _Android_ smartphones. To know more about the _Media Transfer Protocol_ see its [Wikipedia page](https://en.wikipedia.org/wiki/Media_Transfer_Protocol).
+*Note: USB MTP devices are usually _Android_ smartphones. To know more about the
+_Media Transfer Protocol_ see its
+[Wikipedia page](https://en.wikipedia.org/wiki/Media_Transfer_Protocol).*
+
+This shell script supports:  
+
+* mounting USB MTP devices with **jmtpfs**
+* caching keys found with **keyctl**
+* using an alternative "backup" keyfile
+* falling back to **askpass**
+* filtering MTP devices by whitelist/blacklist
+* using a passphrase protected key (decrypted with **cryptsetup**)
+* specifying key path in */etc/crypttab* or a mapping file
 
 
 ## Using your smartphone as a keyfile medium is a good security compromise
 
 On the plus side:
 
-:small_blue_diamond: **Possession factor**: you already have it with you, all the time (I'm sure :yum:), no need for an extra USB key  
-:small_blue_diamond: **Knowledge factor**: the smartphone is locked by a PIN code or a drawing (if it is a modern one) or you can use an encrypted keyfile 
+:small_blue_diamond: **Possession factor**: you already have it with you, all
+the time (I'm sure :yum:), no need for an extra USB key  
+:small_blue_diamond: **Knowledge factor**: the smartphone is locked by a PIN
+code or a drawing (if it is a modern one) or you can use an encrypted keyfile 
 
 On the down side:
 
-:small_orange_diamond: a smartphone is an active connected device which might be hacked remotely, by an evil application, or the proprietary OS  
-:small_orange_diamond: to use this feature you need to let the `/boot` partition unencrypted (like most _grub_ advanced features)  
+:small_orange_diamond: a smartphone is an active connected device which might
+be hacked remotely, by an evil application, or the proprietary OS  
+:small_orange_diamond: to use this feature you need to let the `/boot` partition
+unencrypted (like most _grub_ advanced features)  
 
 To lower the aspect of the two downside mentionned above:
 
-:small_orange_diamond: If your smartphone is already hacked, you're screwed anyway :shit:  
-:small_orange_diamond: If someone with expert hacking skills (i.e.: tweaking an initramfs) have a physical access to your computer, you're also screwed!  
+:small_orange_diamond: If your smartphone is already hacked, you're screwed
+anyway :shit:  
+:small_orange_diamond: If someone with expert hacking skills (i.e.: tweaking an
+initramfs) have a physical access to your computer, you're also screwed!  
 
-An evil hacker :trollface: needs to know the following in order to perform a successfull decrypting of your hard disk without your help:
+An evil hacker :trollface: needs to know the following in order to perform a
+successfull decrypting of your hard disk without your help:
 
 :black_small_square: your partitions are encrypted  
 :black_small_square: you use this special script to unlock it with your phone  
-:black_small_square: the PIN code of the phone to access the file and **stealing your phone** (or hacking it)  
-:black_small_square: which file is the keyfile in the phone filesystem (you should use a file looking like noting fancy/obvious)  
-:black_small_square: eventually the vendor ID and product ID to mimic your phone with another USB device (if you have enabled the whitelist filter security)  
+:black_small_square: the PIN code of the phone to access the file and
+**stealing your phone** (or hacking it)  
+:black_small_square: which file is the keyfile in the phone filesystem (you
+should use a file looking like noting fancy/obvious)  
+:black_small_square: eventually the vendor ID and product ID to mimic your phone
+with another USB device (if you have enabled the whitelist filter security)  
 
-So, in case of a stolen computer it is a very good/acceptable solution :closed_lock_with_key:, otherwise (physical access by geeks) not so much.
+So, in case of a stolen computer it is a very good/acceptable solution
+:closed_lock_with_key:, otherwise (physical access by geeks) not so much.
 
 
 ## Requirements
 
-If you want to use USB MTP device (that's the whole point) you will need the **jmtpfs** binary.
-On Debian you can install it with:
+If you want to use USB MTP device (that's the whole point) you will need the
+**jmtpfs** binary.  
+On Debian/Ubuntu you can install it with:  
 ```sh
-apt install jmtpfs
+debian> apt install jmtpfs
 ```
 
-If you want to have key caching, to prevent multiple mounting/unmounting of the USB MTP device, you will need **keyctl** binary.
-On Debian you can install it with:
+If you want to have key caching, to prevent multiple mounting/unmounting of the
+USB MTP device, you will need **keyctl** binary.  
+On Debian/Ubuntu you can install it with:  
 ```sh
-apt install keyutils
+debian> apt install keyutils
 ```
 
 ## Installation
 
-You should have already an encrypted disk/partition with LUKS, let's say we choose `/dev/vda1`
+
+:information_source: *Note: This installation process is for Debian/Ubuntu Linux distribution. It should not be hard to adapt it for other Linux distro: contributions welcome!*
+
+
+### Get the code (clone this repo) and install script to */sbin*
+
+Clone this repository somewhere ~~over the rainbow~~ in your filesystem  
 ```sh
-# should not print anything
-cryptsetup isLuks /dev/vda1||echo 'Not a LUKS device'
+~> git clone -q https://github.com/mbideau/cryptkey-from-usb-mtp.git /tmp/cryptkey-from-usb-mtp
 ```
 
-Clone this repository somewhere ~~over the rainbow~~ in your filesystem
+Copy the file `cryptkey-from-usb-mtp.sh` to your `/sbin` directory and
+ensure it has the _execute_ permission flag set  
 ```sh
-git clone -q https://github.com/mbideau/cryptkey-from-usb-mtp.git /tmp/cryptkey-from-usb-mtp
-```
-
-Copy the file `cryptkey-from-usb-mtp.sh` to your `/sbin` directory and ensure it has the _execute_ permission flag set
-```sh
-sudo cp /tmp/cryptkey-from-usb-mtp/cryptkey-from-usb-mtp.sh /sbin/cryptkey-from-usb-mtp
+~> sudo cp /tmp/cryptkey-from-usb-mtp/cryptkey-from-usb-mtp.sh /sbin/cryptkey-from-usb-mtp
 sudo chmod +x /sbin/cryptkey-from-usb-mtp
 ```
 
-Create or choose a file to be your key file
-```sh
-dd if=/dev/urandom of=/mnt/mtp-device/secret_key.bin bs=1KiB count=31
-```
-*Replace '/mnt/mtp-device/secret_key.bin' with the path to the key file in your mounted USB MTP device's filesystem.*  
-**Note: if you want to be able to use the caching mecanism, you must use a key file which size is less than 32KiB.**
+### Have an encrypted disk that need decryption at boot time (initram)
 
-And add it to your luks devices
+You should already have an encrypted disk/partition with LUKS, let's say we
+choose `/dev/vda1`  
 ```sh
-sudo cryptsetup luksAddKey /dev/vda1 /mnt/mtp-device/secret_key.bin
-```
-*Replace '/dev/vda1' with your encrypted drive and '/mnt/mtp-device/secret_key.bin' with your key file path (as above).*  
-
-Adjust the `/etc/crypttab` entries accordingly (See [documentation](https://manpages.debian.org/stable/cryptsetup/crypttab.5.en.html))
-```sh
-vda1_crypt  UUID=5163bc36 'secret_key.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
-```
-*Replace 'vda1_crypt' with the device mapper name you want (same as your encrypted drive plus suffix '_crypt' is common).*
-*Use a path relative to the MTP device filesystem in the third column.*
-
-To prevent messing with spaces and non-ascii chars, you can urlencode the path to the keyfile with the command:
-```sh
-cryptkey-from-usb-mtp --encode "Mémoire interne de stockage/Mon fichier très secret.bin"
-```
-Then adjust the `/etc/crypttab` third entry to use 'urlenc:'
-```sh
-vda1_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%20de%20stockage%2fMon%20fichier%20tr%c3%a8s%20secret.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
+# should not print anything
+~> cryptsetup isLuks /dev/vda1||echo 'Not a LUKS device'
 ```
 
-To use an encrypted key instead of a regular file, create it with:
+### Tell *cryptroot* to use this script to get the decrypt key (from USB)
+
+Adjust the `/etc/crypttab` entries accordingly (See
+[documentation](https://manpages.debian.org/stable/cryptsetup/crypttab.5.en.html))  
+```conf
+vda1_crypt  UUID=5163bc36  none  luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
+```  
+*Replace 'vda1_crypt' with the device mapper name you want (same as your
+encrypted drive plus suffix '_crypt' is common).*  
+*We do not specify a key path in third column because we will use a mapping
+file (to keep a readable file, and prevent 'systemd' complaining at boot time
+about unkown key path), but we could have done that (see below).*
+
+### Tell the script which key to use to decrypt which device
+
+#### Create a keyfile to decrypt the device (if not already done)
+
+Create or choose a file to be your key file  
+```sh
+~> dd if=/dev/urandom of=/mnt/mtp-device/secret_key.bin bs=1KiB count=31
+```  
+*Replace '/mnt/mtp-device/secret_key.bin' with the path to the key file in your
+mounted USB MTP device's filesystem.*  
+:warning: **Note: if you want to be able to use the caching mecanism, you must
+use a key file which size is less than 32KiB.**
+
+And add it to your luks devices  
+```sh
+~> sudo cryptsetup luksAddKey /dev/vda1 /mnt/mtp-device/secret_key.bin
+```  
+*Replace '/dev/vda1' with your encrypted drive and
+'/mnt/mtp-device/secret_key.bin' with your key file path (as above).*  
+
+To use an encrypted key instead of a regular file, create it with:  
 ```sh
 # container file
-dd if=/dev/urandom of=/mnt/mtp-device/secret_key.enc bs=1KiB count=1059
+~> dd if=/dev/urandom of=/mnt/mtp-device/secret_key.enc bs=1KiB count=1059
 # encrypt the file
-cryptsetup luksformat --align-payload 1 /mnt/mtp-device/secret_key.enc
+~> cryptsetup luksformat --align-payload 1 /mnt/mtp-device/secret_key.enc
 # open it
-sudo cryptsetup open /mnt/mtp-device/secret_key.enc secret_key_decrypted
+~> sudo cryptsetup open /mnt/mtp-device/secret_key.enc secret_key_decrypted
 # add it to your luks devices
-sudo cryptsetup luksAddKey /dev/vda1 /dev/mapper/secret_key_decrypted
+~> sudo cryptsetup luksAddKey /dev/vda1 /dev/mapper/secret_key_decrypted
 # close it
-sudo cryptsetup close secret_key_decrypted
-```
-*Replace '/mnt/mtp-device/secret_key.enc' with the path to the key file in your mounted USB MTP device's filesystem.*  
-*Replace '/dev/vda1' with your encrypted drive and '/mnt/mtp-device/secret_key.enc' with your key file path (as above).*  
-**Note: if you want to be able to use the caching mecanism, you must use a key file which size is less than 1059KiB (LUKS header included).**  
-Then adjust the `/etc/crypttab` third entry to use 'pass:'
+~> sudo cryptsetup close secret_key_decrypted
+```  
+*Replace '/mnt/mtp-device/secret_key.enc' with the path to the key file in your
+mounted USB MTP device's filesystem.*  
+*Replace '/dev/vda1' with your encrypted drive and '/mnt/mtp-device/secret_key.enc'
+with your key file path (as above).*  
+:warning: **Note: if you want to be able to use the caching mecanism, you must use a key
+file which size is less than 1059KiB (LUKS header included).**  
+
+#### Add the mapping between device and key
+
+Execute the following command:  
 ```sh
-vda1_crypt  UUID=5163bc36 'pass:secret_key.enc' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
-```
-*Replace 'vda1_crypt' with the device mapper name you want (same as your encrypted drive plus suffix '_crypt' is common).*
+~> cryptkey-from-usb-mtp --add-mapping vda1_crypt "Mémoire interne de stockage/Mon fichier très secret.bin"
+```  
 
-Install the initramfs hook
+This will add the following line in mapping file
+`/etc/cryptkey-from-usb-mtp/mapping.conf`:  
+```conf
+vda1_crypt | urlenc | M%c3%a9moire%20interne%20de%20stockage%2fMon%20fichier%20tr%c3%a8s%20secret.bin
+```  
+
+For an encrypted key file add `encrypted` as last argument, like:
 ```sh
-cryptkey-from-usb-mtp --initramfs-hook
-```
+~> cryptkey-from-usb-mtp --add-mapping vda1_crypt "Mémoire interne de stockage/Mon fichier très secret.bin" encrypted
+```  
 
-Update the initramfs
+Which will add the following line in mapping file
+`/etc/cryptkey-from-usb-mtp/mapping.conf`:  
+```conf
+vda1_crypt | pass,urlenc | M%c3%a9moire%20interne%20de%20stockage%2fMon%20fichier%20tr%c3%a8s%20secret.bin
+```  
+*Note: the 'pass' in the second column means 'encrypted'. We use the keyword 'pass' to distinguish from 'urlenc'.*
+
+### Tell *update-initramfs* to include required files
+
+Install the initramfs hook  
 ```sh
-update-initramfs -tuck all
+~> cryptkey-from-usb-mtp --initramfs-hook
 ```
 
-Check that everything has been copied inside initramfs
+Update the initramfs  
 ```sh
-cryptkey-from-usb-mtp --check-initramfs
+~> update-initramfs -tuck all
 ```
 
-Reboot and pray hard! ^^'
+Check that everything has been copied inside initramfs  
 ```sh
-reboot
+~> cryptkey-from-usb-mtp --check-initramfs
 ```
 
-**Say thank you :heartbeat:** (:star: star the repo on Github, :love_letter: email me, :loudspeaker: spread the words) ;-)
+### Reboot
 
+Pray hard! :pray:  
+```sh
+~> reboot
+```
+
+### Congrats! Support me/us/this!
+
+You are now more secured and without too much pain!  
+Great improvment! :tada: :thumbsup:
+
+**Say thank you** :heartbeat: :blush:  
+:star: star the repo on Github  
+:love_letter: email me  
+:loudspeaker: write about it on your blog/social media
+
+**Contribute back** by:
+
+* helping other users
+* adapting the script to other Linux flavors
+* translating its messages to other langages
+* helping to include it into distro packages
+* see the [TODO list](#TODO) (below)
 
 ## Tests
 
-This has been extensively tested on my desktop machine with _Debian stretch (9.5)_ over a kernel _Linux 4.9.0.7-amd64_
+This has been extensively tested on my desktop machine with _Debian stretch
+(9.5)_ over a kernel _Linux 4.9.0.7-amd64_
 and with an _Android 5.1_ smartphone.
 No more, **be warned**.
 
@@ -197,6 +287,19 @@ OPTIONS:
                            PATH is optional. It defaults to:
                              '/etc/cryptkey-from-usb-mtp/devices.blacklist'.
 
+  --add-mapping DM_TARGET KEY_PATH [encrypted]
+                           Add a mapping between a DM target DM_TARGET and a
+                           key path KEY_PATH. The key might be encrypted in
+                           which case you need to specify it with 'encrypted'.
+                           If the key path contains non-ascii char it will be
+                           automatically url-encoded and added option 'urlenc'.
+                           The mapping entry will be added to file:
+                             '/etc/cryptkey-from-usb-mtp/mapping.conf'.
+
+  --check-mapping [PATH]   Check a mapping file.
+                           PATH is optional. It defaults to:
+                             '/etc/cryptkey-from-usb-mtp/mapping.conf'.
+
 ENV:
 
   CRYPTTAB_KEY             A path to a key file.
@@ -205,9 +308,11 @@ ENV:
                            Same process apply as for the 'keyfile' argument,
                            i.e.: removing quotes, URL decoding and decrypting.
 
-  cryptsource              (informative only) The disk source to unlock.
+  crypttarget              The target device mapper name (unlocked).
+                           It is used to do the mapping with a key if none is
+                           specified in the crypttab file, else informative only.
 
-  crypttarget              (informative only) The target device mapper name unlocked.
+  cryptsource              (informative only) The disk source to unlock.
 
 
 FILES:
@@ -220,6 +325,10 @@ FILES:
 
   /etc/cryptkey-from-usb-mtp/devices.blacklist
                            The path to a list of filtered devices (whitelist/blacklist)
+
+  /etc/cryptkey-from-usb-mtp/mapping.conf
+                           The path to a mapping file containing mapping between
+                           crypttab DM target entries and key (options and path).
 
 
 EXAMPLES:
@@ -235,11 +344,23 @@ EXAMPLES:
     /sbin/cryptkey-from-usb-mtp 'urlenc:M%c3%a9moire%20interne%2fkey.bin'    \
     | cryptsetup open /dev/disk/by-uuid/5163bc36 md0_crypt
 
-  # a crypttab entry configuration URL encoded to prevent crashing on spaces and UTF8 chars
+  # a /etc/crypttab entry configuration URL encoded to prevent crashing on spaces and UTF8 chars
   md0_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
 
-  # a crypttab entry configuration URL encoded and passphrase protected
+  # a /etc/crypttab entry configuration URL encoded and passphrase protected
   md0_crypt  UUID=5163bc36 'urlenc:pass:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
+
+  # a /etc/crypttab entry configuration without any key (key will be specified in a mapping file)
+  md0_crypt  UUID=5163bc36   none  luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
+
+  # add the mapping between DM target 'md0_crypt' and a key (encrypted)
+  > cryptkey-from-usb-mtp --add-mapping md0_crypt "Mémoire interne/keyfile.bin" encrypted
+
+  # the command above will result in the following mapping entry in /etc/cryptkey-from-usb-mtp/mapping.conf
+  md0_crypt | urlenc,pass | M%c3%a9moire%20interne%2fkeyfile.bin
+
+  # check the mapping file syntax
+  > cryptkey-from-usb-mtp --check-mapping
 
   # create an initramfs hook to copy all required files (i.e.: 'jmtpfs') in it
   > cryptkey-from-usb-mtp --initramfs-hook
@@ -263,39 +384,68 @@ EXAMPLES:
 
 ```
 
+
 ## Tips
 
-Prevent non-root users to see the file used as a key, defined in `/etc/crypttab`, by making the config file not readable by everyone:
+### Hide your key path to non-root users
+
+Prevent non-root users to see the file used as a key, defined in
+`/etc/crypttab`, by making the config file not readable by everyone:  
 ```sh
-chmod 640 /etc/crypttab
+~> chmod 640 /etc/crypttab
 ```
+
+Same with the (optional) mapping file:  
+```sh
+~> chmod 640 /etc/cryptkey-from-usb-mtp/mapping.conf
+```
+
+### Specify the key path (and options) directly inside /etc/crypttab (no mapping file)
+
+If you want to specify the key path directly inside `/etc/crypttab` do the
+following.
+
+To prevent messing with spaces and non-ascii chars, you can urlencode the path
+to the keyfile with the command:  
+```sh
+~> cryptkey-from-usb-mtp --encode "Mémoire interne de stockage/Mon fichier très secret.bin"
+```
+Then adjust the `/etc/crypttab` third entry to use 'urlenc:'  
+```conf
+vda1_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%20de%20stockage%2fMon%20fichier%20tr%c3%a8s%20secret.bin' luks,keyscript=/sbin/cryptkey-from-usb-mtp,initramfs
+```  
+*If your key is encrypted, add 'pass:' before 'urlenc'.*  
+
 
 ## Troubleshooting
 
 ### Debuging
 
-If you want more information on what this script is really doing under the hood, you can enable debuging
+If you want more information on what this script is really doing under the
+hood, you can enable debuging  
 ```sh
-sed 's/^DEBUG=.*/DEBUG=\$TRUE/' -i /sbin/cryptkey-from-usb-mtp
+~> sed 's/^DEBUG=.*/DEBUG=\$TRUE/' -i /sbin/cryptkey-from-usb-mtp
 ```
 
-I recommend you to also show the filename of the key used to decrypt the partitions
+I recommend you to also show the filename of the key used to decrypt the
+partitions  
 ```sh
-sed 's/^DISPLAY_KEY_FILE=.*/DISPLAY_KEY_FILE=\$TRUE/' -i /sbin/cryptkey-from-usb-mtp
+~> sed 's/^DISPLAY_KEY_FILE=.*/DISPLAY_KEY_FILE=\$TRUE/' -i /sbin/cryptkey-from-usb-mtp
 ```
 
-Then update the initramfs, check it and reboot
+Then update the initramfs, check it and reboot  
 ```sh
-update-initramfs -tuck all && cryptkey-from-usb-mtp --check-initramfs && reboot
+~> update-initramfs -tuck all && cryptkey-from-usb-mtp --check-initramfs && reboot
 ```
 
-**Note: instead of editing the shell script directly you might better edit the hook script to modify included script in initramfs.**
+**Note: instead of editing the shell script directly you might better edit the
+hook script to modify included script in initramfs.**
 
-In the file `/etc/initramfs-tools/hook/cryptkey-from-usb-mtp` after the line
+In the file `/etc/initramfs-tools/hook/cryptkey-from-usb-mtp` after the line  
 ```sh
 copy_file 'file' "/sbin/cryptkey-from-usb-mtp"; [ $? -le 1 ] || exit 2
-```
-add the following
+```  
+add the following  
 ```sh
 sed -i "$DESTDIR"/sbin/cryptkey-from-usb-mtp \
     -e 's/^DEBUG=.*/DEBUG=\$TRUE/'           \
@@ -305,45 +455,54 @@ sed -i "$DESTDIR"/sbin/cryptkey-from-usb-mtp \
 
 ### Booting from an initramfs shell
 
-If you happen to corrupt your initramfs and your system drop you to an initramfs shell (_busybox_), you can follow those steps to boot.
+If you happen to corrupt your initramfs and your system drop you to an initramfs
+shell (_busybox_), you can follow those steps to boot.
 
-Manually decrypt your partitions
+Manually decrypt your partitions  
 ```sh
-cryptsetup open /dev/vda1 vda1_crypt
-```
+~> cryptsetup open /dev/vda1 vda1_crypt
+```  
 *Replace 'vda1' with the name of your patition.*
 
-Mount the root partition (and all others paritions into it)
+Mount the root partition (and all others paritions into it)  
 ```sh
-mount /dev/mapper/vda1_crypt /root
-```
-*Replace 'vda1' with the name of your patition and do not forget to add mount required options with '-o OPTIONS'.*  
-**Note: '/root' is the default root filesystem target directory for Debian initramfs, but you can use any directory you want.**
+~> mount /dev/mapper/vda1_crypt /root
+```  
+*Replace 'vda1' with the name of your patition and do not forget to add mount
+required options with '-o OPTIONS'.*  
+**Note: '/root' is the default root filesystem target directory for Debian
+initramfs, but you can use any directory you want.**
 
-Mount system's partitions
+Mount system's partitions  
 ```sh
-mount --bind /proc    /root/proc
-mount --bind /sys     /root/sys
-mount --bind /dev     /root/dev
-mount --bind /dev/pts /root/dev/pts
+~> mount --bind /proc    /root/proc
+~> mount --bind /sys     /root/sys
+~> mount --bind /dev     /root/dev
+~> mount --bind /dev/pts /root/dev/pts
 ```
 
 Then you have 2 options:
 1. exit the initramfs shell, and the boot process should continue successfully  
 2. chroot into the root filesystem with `chroot /root /bin/bash`
 
-Once logged in (or into) the root filesystem, do your modifications, then update the initramfs, check it and reboot
+Once logged in (or into) the root filesystem, do your modifications, then
+update the initramfs, check it and reboot  
 ```sh
-update-initramfs -tuck all && cryptkey-from-usb-mtp --check-initramfs && reboot
+~> update-initramfs -tuck all && cryptkey-from-usb-mtp --check-initramfs && reboot
 ```
 
 ### TODO
 
-- [ ] add locales like for [luksFormat](https://salsa.debian.org/cryptsetup-team/cryptsetup/tree/master/debian/scripts/po) (and do the French translation of luksFormat while at it)
-- [ ] build a test suite (using virtualisation to do many runs and check boot success)
-- [ ] contact Debian cryptsetup team to ask to add the script to [their repo](https://salsa.debian.org/cryptsetup-team/cryptsetup/tree/master/debian/scripts)
+- [ ] add locales like for
+[luksFormat](https://salsa.debian.org/cryptsetup-team/cryptsetup/tree/master/debian/scripts/po)
+(and do the French translation of luksFormat while at it)
+- [ ] build a test suite (using virtualisation to do many runs and check boot
+success)
+- [ ] contact Debian cryptsetup team to ask to add the script to
+[their repo](https://salsa.debian.org/cryptsetup-team/cryptsetup/tree/master/debian/scripts)
 - [ ] contact other distro (Arch) to ask for integration (Dracut maybe)
 - [ ] start a communication campaign (if the feedbacks are positives enough)
+
 
 ## Author and Date
 

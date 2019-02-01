@@ -27,10 +27,16 @@ FALSE=1
 # configuration
 DEBUG=$FALSE
 DISPLAY_KEY_FILE=$FALSE
-MOUNT_BASE_DIR=/mnt
 KEYFILE_BAK=/crypto_keyfile.bin
+MOUNT_BASE_DIR=/mnt
+CRYPTTAB_FILE=/etc/crypttab
+CONFIG_DIR=/etc/`basename "$0" '.sh'`
+MAPPING_FILE=$CONFIG_DIR/mapping.conf
+MAPPING_FILE_SEP='|'
+MAPPING_LINE_REGEXP="^\([[:space:]]*[^$MAPPING_FILE_SEP]\+[[:space:]]*$MAPPING_FILE_SEP\)\{2\}[[:space:]]*[^$MAPPING_FILE_SEP]\+[[:space:]]*\$"
+MAPPING_OPTS_REGEXP='^\(pass\([,; ]urlenc\)\?\|urlenc\([,; ]pass\)\?\)\?$'
 MTP_FILTER_STRATEGY=blacklist
-MTP_FILTER_FILE=/etc/`basename "$0" '.sh'`/devices.$MTP_FILTER_STRATEGY
+MTP_FILTER_FILE=$CONFIG_DIR/devices.$MTP_FILTER_STRATEGY
 MTP_SLEEP_SEC_BEFORE_WAIT=3
 MTP_WAIT_TIME=5
 MTP_WAIT_MAX=30
@@ -80,7 +86,7 @@ OPTIONS:
   --encode STRING          When specified, expext a string as unique argument.
                            The string will be URL encoded and printed.
                            NOTE: Usefull to create a key path without spaces
-                           to use into /etc/crypttab at the third column.
+                           to use into $CRYPTTAB_FILE at the third column.
 
   --decode STRING          When specified, expext a string as unique argument.
                            The string will be URL decoded and printed.
@@ -99,6 +105,19 @@ OPTIONS:
                            PATH is optional. It defaults to:
                              '$MTP_FILTER_FILE'.
 
+  --add-mapping DM_TARGET KEY_PATH [encrypted]
+                           Add a mapping between a DM target DM_TARGET and a
+                           key path KEY_PATH. The key might be encrypted in
+                           which case you need to specify it with 'encrypted'.
+                           If the key path contains non-ascii char it will be
+                           automatically url-encoded and added option 'urlenc'.
+                           The mapping entry will be added to file:
+                             '$MAPPING_FILE'.
+
+  --check-mapping [PATH]   Check a mapping file.
+                           PATH is optional. It defaults to:
+                             '$MAPPING_FILE'.
+
 ENV:
 
   CRYPTTAB_KEY             A path to a key file.
@@ -107,9 +126,11 @@ ENV:
                            Same process apply as for the 'keyfile' argument,
                            i.e.: removing quotes, URL decoding and decrypting.
 
-  cryptsource              (informative only) The disk source to unlock.
+  crypttarget              The target device mapper name (unlocked).
+                           It is used to do the mapping with a key if none is
+                           specified in the crypttab file, else informative only.
 
-  crypttarget              (informative only) The target device mapper name unlocked.
+  cryptsource              (informative only) The disk source to unlock.
 
 
 FILES:
@@ -123,10 +144,14 @@ FILES:
   $MTP_FILTER_FILE
                            The path to a list of filtered devices (whitelist/blacklist)
 
+  $MAPPING_FILE
+                           The path to a mapping file containing mapping between
+                           crypttab DM target entries and key (options and path).
+
 
 EXAMPLES:
 
-  # encoding a string to further add it to /etc/crypttab
+  # encoding a string to further add it to $CRYPTTAB_FILE
   > `basename "$0"` --encode 'relative/path to/key/file/on/usb/mtp/device'
 
   # decode a URL encoded string, just to test
@@ -137,11 +162,23 @@ EXAMPLES:
     `realpath "$0"` 'urlenc:M%c3%a9moire%20interne%2fkey.bin'    \\
     | cryptsetup open /dev/disk/by-uuid/5163bc36 md0_crypt
 
-  # a crypttab entry configuration URL encoded to prevent crashing on spaces and UTF8 chars
+  # a $CRYPTTAB_FILE entry configuration URL encoded to prevent crashing on spaces and UTF8 chars
   md0_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=`realpath "$0"`,initramfs
 
-  # a crypttab entry configuration URL encoded and passphrase protected
+  # a $CRYPTTAB_FILE entry configuration URL encoded and passphrase protected
   md0_crypt  UUID=5163bc36 'urlenc:pass:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=`realpath "$0"`,initramfs
+
+  # a $CRYPTTAB_FILE entry configuration without any key (key will be specified in a mapping file)
+  md0_crypt  UUID=5163bc36   none  luks,keyscript=`realpath "$0"`,initramfs
+
+  # add the mapping between DM target 'md0_crypt' and a key (encrypted)
+  > `basename "$0"` --add-mapping md0_crypt "Mémoire interne/keyfile.bin" encrypted
+
+  # the command above will result in the following mapping entry in $MAPPING_FILE
+  md0_crypt | urlenc,pass | M%c3%a9moire%20interne%2fkeyfile.bin
+
+  # check the mapping file syntax
+  > `basename "$0"` --check-mapping
 
   # create an initramfs hook to copy all required files (i.e.: 'jmtpfs') in it
   > `basename "$0"` --initramfs-hook
@@ -188,6 +225,11 @@ copy_file 'file' "`realpath "$0"`"; [ \$? -le 1 ] || exit 2
 
 # copy keyctl binary (optional), for caching keys
 [ -x /bin/keyctl ] && copy_exec /bin/keyctl || exit 2
+
+# copy mapping file
+if [ -r "$MAPPING_FILE" ]; then
+    copy_file 'file' "$MAPPING_FILE"; [ \$? -le 1 ] || exit 2
+fi
 
 # copy filter files (optional)
 for _strategy in whitelist blacklist; do
@@ -426,6 +468,105 @@ unmount_mtp_device()
         rmdir "$1" >/dev/null||true
     fi
 }
+# check the mapping file syntax and values
+# $1  string  the path to the mapping file to check
+# return 0 (TRUE) if the mapping is correct, else 1 (FALSE)
+check_mapping()
+{
+    _parsing_success=$TRUE
+    debug "Parsing mapping file '$1' ..."
+    IFS_BAK="$IFS"
+    IFS="
+"
+    for _line in `grep -v '^#\|^[[:space:]]*$' "$1"`; do
+        IFS="$IFS_BAK"
+        debug "Checking line: '$_line'"
+        if ! echo "$_line"|grep -q "$MAPPING_LINE_REGEXP"; then
+            error "Invalid line '$_line'"
+            _parsing_success=$FALSE
+        else
+            _dm_target="`echo "$_line"|awk -F "$MAPPING_FILE_SEP" '{print $1}'|trim`"
+            _key_opts="` echo "$_line"|awk -F "$MAPPING_FILE_SEP" '{print $2}'|trim`"
+            _key_path="` echo "$_line"|awk -F "$MAPPING_FILE_SEP" '{print $3}'|trim`"
+            if [ "$_dm_target" = '' ]; then
+                error "DM target is empty for mapping line '$_line'"
+                _parsing_success=$FALSE
+            elif ! grep -q "^[[:space:]]*$_dm_target[[:space:]]" "$CRYPTTAB_FILE"; then
+                warning "DM target '$_dm_target' do not match any DM target in '$CRYPTTAB_FILE'"
+            fi
+            if [ "$_key_path" = '' ]; then
+                error "Key path is empty for mapping line '$_line'"
+                _parsing_success=$FALSE
+            fi
+            if ! echo "$_key_opts"|grep -q "$MAPPING_OPTS_REGEXP"; then
+                error "Invalid key options '$_key_opts' for mapping line '$_line'"
+                _parsing_success=$FALSE
+            fi
+        fi
+        IFS="
+"
+    done
+    IFS="$IFS_BAK"
+    return $_parsing_success
+}
+# add a mapping entry
+# $1  string  the path to the mapping file
+# $2  string  the DM target name
+# $3  string  the path to the keyfile relative to device filesystem
+# $4  string  (optional) 'encrypted' to mean that the key is encrypted
+add_mapping()
+{
+    debug "Adding mapping entry '$*' to file '$1' ..."
+    _mapping_file="$1"
+    _dm_target="$2"
+    _key_path="$3"
+    _key_encryption="$4"
+    _key_opts="`if [ "$_key_encryption" = 'encrypted' ]; then echo 'pass'; fi`"
+
+    # a mapping file doesn't exist
+    if [ ! -e "$_mapping_file" ]; then
+
+        # create it
+	debug "Creating mapping file '$_mapping_file'"
+        touch "$_mapping_file"
+    fi
+
+    # an entry already exists for this DM target
+    _override_mapping=
+    if grep -q "^[[:space:]]*$_dm_target[[:space:]]" "$_mapping_file"; then
+        warning "DM target '$_dm_target' already have a mapping"
+        while ! echo "$_override_mapping"|grep -q '^[yYnN]$'; do
+            info "Override the mapping for DM target '$_dm_target' [Y/n] ?"
+            read _override_mapping
+            if [ "$_override_mapping" = '' ]; then
+                _override_mapping=Y
+            fi
+        done
+        if [ "$_override_mapping" != 'y' -a "$_override_mapping" != 'Y' ]; then
+            info "Aborting."
+            exit 0
+        fi
+    fi
+
+    # key path needs url-encoding
+    if ! echo "$2"|grep -q '^[a-z0-9]\+$'; then
+        _key_path="`urlencode "$_key_path"`"
+        _key_opts="`if [ "$_key_opts" != '' ]; then echo "$_key_opts,"; fi`urlenc"
+        debug "Encoded key path to '$_key_path'"
+        debug "Added 'urlenc' key option"
+    fi
+
+    # write the entry to the file
+    _line="`echo "$_dm_target $MAPPING_FILE_SEP $_key_opts $MAPPING_FILE_SEP $_key_path"|sed 's/|/\\|/g'`"
+    debug "Entry line: '$_line'"
+    if [ "$_override_mapping" = 'y' -o "$_override_mapping" = 'Y' ]; then
+        debug "Overriding the mapping for DM target '$_dm_target'"
+        sed "s#^[[:space:]]*$_dm_target[[:space:]].*#$_line#g" -i "$_mapping_file"
+    else
+        debug "Appending the mapping for DM target '$_dm_target'"
+        echo "$_line" >> "$_mapping_file"
+    fi
+}
 # print the content of the key file specified
 use_keyfile()
 {
@@ -455,13 +596,13 @@ fallback()
     exit 0
 }
 # remove spaces at the begining and end of a string
-# meant to be used with a piped input
+# meant to be used with a piped input
 trim()
 {
     sed 's/^[[:blank:]]*//g;s/[[:blank:]]*$//g'
 }
 # remove useless words in device name string
-# meant to be used with a piped input
+# meant to be used with a piped input
 simplify_name()
 {
     sed 's/[[:blank:]]*\(MTP\|ID[0-9]\+\)[[:blank:]]*//g;s/[[:blank:]]*([^)]*)[[:blank:]]*$//g'
@@ -488,8 +629,9 @@ error()
 
 
 
-# display help (if asked)
-if [ "$1" = '-h' -o "$1" = '--help' ]; then
+# display help (if asked or nothing is specified)
+if [ "$1" = '-h' -o "$1" = '--help' ] \
+|| [ "$1" = '' -a "$CRYPTTAB_KEY" = '' -a "$crypttarget" = '' ]; then
     usage
     exit 0
 fi
@@ -560,6 +702,47 @@ if [ "$1" = '--create-filter' ]; then
     exit 0
 fi
 
+# check mapping file
+if [ "$1" = '--check-mapping' ]; then
+    _mapping_path="$MAPPING_FILE"
+    if [ "$2" != '' ]; then
+        _initramfs_path="$2"
+    fi
+    if [ ! -r "$_mapping_path" ]; then
+        error "Mapping file '$_mapping_path' doesn't exist or isn't readable"
+        exit 2
+    fi
+    check_mapping "$_mapping_path"
+    exit $?
+fi
+
+# add a mapping entry
+if [ "$1" = '--add-mapping' ]; then
+    if [ "$2" = '' -o "$3" = '' ]; then
+        error "Too few arguments for option '--add-mapping'"
+        usage
+        exit 1
+    fi
+    if [ "$4" != '' -a "$4" != 'encrypted' ]; then
+        error "Invalid argument '$4' for option '--add-mapping'"
+        usage
+        exit 1
+    fi
+    if ! grep -q "^[[:space:]]*$2[[:space:]]" "$CRYPTTAB_FILE"; then
+        warning "DM target '$2' do not match any DM target in '$CRYPTTAB_FILE'"
+    fi
+    for i in 2 3 4; do
+        eval _v=\$$i
+        if echo "$_v"|grep -q "$MAPPING_FILE_SEP"; then
+            error "Value '$_v' cannot contain mapping file separator '$MAPPING_FILE_SEP'"
+            exit 2
+        fi
+    done
+    add_mapping "$MAPPING_FILE" "$2" "$3" "$4"
+    check_mapping "$MAPPING_FILE"
+    exit $?
+fi
+
 # display a new line, to distinguish between multiple executions
 # (i.e.: with multiple device to decrypt)
 echo >&2
@@ -568,6 +751,37 @@ echo >&2
 if [ "$CRYPTTAB_KEY" = '' -a "$1" != '' ]; then
     CRYPTTAB_KEY="$1"
 fi
+
+# key is not specified but the DM target is specified
+if [ "$CRYPTTAB_KEY" = '' -a "$crypttarget" != '' ]; then
+    debug "No CRYPTTAB_KEY specified but a DM target '$crypttarget'"
+
+    # there is a mapping file
+    if [ -r "$MAPPING_FILE" ]; then
+        debug "Mapping file '$MAPPING_FILE' found"
+
+        # a line match in the mapping file
+        _matching_line="`grep "^[[:space:]]*$crypttarget[[:space:]]" "$MAPPING_FILE"|tail -n 1||true`"
+        if [ "$_matching_line" != '' ]; then
+            debug "Matching line '$_matching_line' found"
+            _key_opts="` echo "$_matching_line"|awk -F "$MAPPING_FILE_SEP" '{print $2}'|trim`"
+            _key_path="` echo "$_matching_line"|awk -F "$MAPPING_FILE_SEP" '{print $3}'|trim`"
+            debug "Key options: '$_key_opts'"
+            debug "Key path: '$_key_path'"
+
+            # build a key value from it
+            CRYPTTAB_KEY="$_key_path"
+            if [ "$_key_opts" != '' ]; then
+                CRYPTTAB_KEY="`echo "$_key_opts"|sed -e 's/[,; ]/:/g' -e 's/:\+/:/g'`:$CRYPTTAB_KEY"
+            fi
+            debug "New CRYPTTAB_KEY: '$CRYPTTAB_KEY'"
+        fi
+    else
+        debug "No mapping file '$MAPPING_FILE' found"
+    fi
+fi
+
+# key is specified
 if [ "$CRYPTTAB_KEY" != '' ]; then
 
     # remove quoting
@@ -589,7 +803,7 @@ if [ "$CRYPTTAB_KEY" != '' ]; then
     fi
 fi
 
-# key is not specified
+# key is still not specified
 if [ "$CRYPTTAB_KEY" = '' ]; then
 
     # directly fallback
