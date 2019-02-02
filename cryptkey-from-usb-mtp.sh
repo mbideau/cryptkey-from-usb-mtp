@@ -10,6 +10,7 @@
 #   * falling back to 'askpass'
 #   * filtering MTP devices by whitelist/blacklist
 #   * using a passphrase protected key (decrypted with cryptsetup)
+#   * translations
 # 
 # Author : Michael Bideau
 # Licence: GPL v3.0
@@ -49,6 +50,12 @@ KERNEL_CACHE_TIMEOUT_SEC=120
 INITRAMFS_HOOK_PATH_DEFAULT=/etc/initramfs-tools/hooks/`basename "$0" '.sh'`
 INITRAMFS_PATH_DEFAULT=/boot/initrd.img-`uname -r`
 
+# translation
+TEXTDOMAIN=messages
+export TEXTDOMAIN
+#LANGUAGE=fr
+#export LANGUAGE
+
 # internal constants
 _FLAG_WAITED_FOR_DEVICE_ALREADY=/.mtp-waited-already.flag
 _MTP_DEVICE_LIST_OUT=/.mtp_device.lst.out
@@ -56,151 +63,194 @@ _JMTPFS_ERROR_LOGFILE=/.jmtpfs.err.log
 _FLAG_MTP_DEVICES_TO_SKIP=/.mtp_device_to_skip.lst.txt
 _PASSPHRASE_PROTECTED=$FALSE
 _PRINTF="`which printf`"
+_GETTEXT="`which gettext||which echo`"
+_USAGE_LEFT_MARGIN='                           '
 
 # usage
 usage()
 {
     cat <<ENDCAT
 
-Print a key to STDOUT from a key file stored on a USB MTP device.
+`_t 'Print a key to STDOUT from a key file stored on a USB MTP device.'`
 
-USAGE: `basename "$0"`  OPTIONS  [keyfile]
+`_t 'USAGE'`: `basename "$0"`  `_t 'OPTIONS'`  [`_t 'keyfile'`]
 
-ARGUMENTS:
-
-  keyfile    optional      Is the path to a key file.
-                           The argument is optional if the env var CRYPTTAB_KEY
-                           is specified, required otherwise.
-                           It is relative to the device mount point/dir.
-                           Quotes ['"] will be removed at the begining and end.
-                           If it starts with 'urlenc:' it will be URL decoded.
-                           If it starts with 'pass:' it will be decrypted with
-                           'cryptsetup open' on the file.
-                           'urlenc: and 'pass:' can be combined in any order, 
-                           i.e.: 'urlenc:pass:De%20toute%20beaut%c3%a9.jpg'
-                              or 'pass:urlenc:De%20toute%20beaut%c3%a9.jpg'.
-OPTIONS:
-
-  -h|--help                Display this help.
-
-  --encode STRING          When specified, expext a string as unique argument.
-                           The string will be URL encoded and printed.
-                           NOTE: Usefull to create a key path without spaces
-                           to use into $CRYPTTAB_FILE at the third column.
-
-  --decode STRING          When specified, expext a string as unique argument.
-                           The string will be URL decoded and printed.
-
-  --initramfs-hook [PATH]  Create an initramfs hook to path.
-                           PATH is optional. It defaults to:
-                             '$INITRAMFS_HOOK_PATH_DEFAULT'.
-
-  --check-initramfs [PATH] Check that every requirements had been copied
-                           inside the initramfs specified.
-                           PATH is optional. It defaults to:
-                             '$INITRAMFS_PATH_DEFAULT'.
-
-  --create-filter [PATH]   Create a filter list based on current available
-                           devices (i.e.:produced by 'jmtpfs -l').
-                           PATH is optional. It defaults to:
-                             '$MTP_FILTER_FILE'.
-
-  --add-mapping DM_TARGET KEY_PATH [encrypted]
-                           Add a mapping between a DM target DM_TARGET and a
-                           key path KEY_PATH. The key might be encrypted in
-                           which case you need to specify it with 'encrypted'.
-                           If the key path contains non-ascii char it will be
-                           automatically url-encoded and added option 'urlenc'.
-                           The mapping entry will be added to file:
-                             '$MAPPING_FILE'.
-
-  --check-mapping [PATH]   Check a mapping file.
-                           PATH is optional. It defaults to:
-                             '$MAPPING_FILE'.
-
-ENV:
-
-  CRYPTTAB_KEY             A path to a key file.
-                           The env var is optional if the argument 'keyfile'
-                           is specified, required otherwise.
-                           Same process apply as for the 'keyfile' argument,
-                           i.e.: removing quotes, URL decoding and decrypting.
-
-  crypttarget              The target device mapper name (unlocked).
-                           It is used to do the mapping with a key if none is
-                           specified in the crypttab file, else informative only.
-
-  cryptsource              (informative only) The disk source to unlock.
-
-
-FILES:
-
-  `realpath "$0"`
-                           This shell script (to be included in the initramfs)
-
-  $INITRAMFS_HOOK_PATH_DEFAULT
-                           The default path to initramfs hook
-
-  $MTP_FILTER_FILE
-                           The path to a list of filtered devices (whitelist/blacklist)
-
-  $MAPPING_FILE
-                           The path to a mapping file containing mapping between
-                           crypttab DM target entries and key (options and path).
-
-
-EXAMPLES:
-
-  # encoding a string to further add it to $CRYPTTAB_FILE
-  > `basename "$0"` --encode 'relative/path to/key/file/on/usb/mtp/device'
-
-  # decode a URL encoded string, just to test
-  > `basename "$0"` --decode 'relative/path%20to/key/file/on/usb/mtp/device'
-
-  # used as a standalone shell command to unlock a disk
-  > crypttarget=md0_crypt cryptsource=/dev/disk/by-uuid/5163bc36 \\
-    `realpath "$0"` 'urlenc:M%c3%a9moire%20interne%2fkey.bin'    \\
-    | cryptsetup open /dev/disk/by-uuid/5163bc36 md0_crypt
-
-  # a $CRYPTTAB_FILE entry configuration URL encoded to prevent crashing on spaces and UTF8 chars
-  md0_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=`realpath "$0"`,initramfs
-
-  # a $CRYPTTAB_FILE entry configuration URL encoded and passphrase protected
-  md0_crypt  UUID=5163bc36 'urlenc:pass:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=`realpath "$0"`,initramfs
-
-  # a $CRYPTTAB_FILE entry configuration without any key (key will be specified in a mapping file)
-  md0_crypt  UUID=5163bc36   none  luks,keyscript=`realpath "$0"`,initramfs
-
-  # add the mapping between DM target 'md0_crypt' and a key (encrypted)
-  > `basename "$0"` --add-mapping md0_crypt "Mémoire interne/keyfile.bin" encrypted
-
-  # the command above will result in the following mapping entry in $MAPPING_FILE
-  md0_crypt | urlenc,pass | M%c3%a9moire%20interne%2fkeyfile.bin
-
-  # check the mapping file syntax
-  > `basename "$0"` --check-mapping
-
-  # create an initramfs hook to copy all required files (i.e.: 'jmtpfs') in it
-  > `basename "$0"` --initramfs-hook
-
-  # update the content of the initramfs
-  > update-initramfs -tuck all
-
-  # check that every requirements had been copied inside initramfs
-  > `basename "$0"` --check-initramfs
-
-  # reboot and pray hard! ^^'
-  > reboot
-  
-  # add a whitelist filter based on currently available MTP devices
-  > sed 's/^MTP_FILTER_STRATEGY=.*/MTP_FILTER_STRATEGY=whitelist/' -i `realpath "$0"`
-  > `basename "$0"` --create-filter
-
-  # enable debug mode, update initramfs, check it and reboot
-  > sed 's/^DEBUG=.*/DEBUG=\\$TRUE/' -i `realpath "$0"`
-  > update-initramfs -tuck all && `basename "$0"` --check-initramfs && reboot
+`_t 'ARGUMENTS'`:
 
 ENDCAT
+    _arg_kfile_desc="`_t  "Is the path to a key file.
+                           The argument is optional if the env var %s
+                           is specified, required otherwise.
+                           It is relative to the device mount point/dir.
+                           Quotes ['"'"'"] will be removed at the begining and end.
+                           If it starts with '%s' it will be URL decoded.
+                           If it starts with '%s' it will be decrypted with
+                           '%s' on the file.
+                           '%s' and '%s' can be combined in any order, 
+                           i.e.: '%s'
+                              or '%s'."`"
+    _arg_kfile_desc="`printf "$_arg_kfile_desc\n" 'CRYPTTAB_KEY' 'urlenc:' 'pass:' 'cryptsetup open' 'urlenc:' 'pass:' 'urlenc:pass:De%20toute%20beaut%c3%a9.jpg' 'pass:urlenc:De%20toute%20beaut%c3%a9.jpg'`"
+    cat <<ENDCAT
+  `_t 'keyfile'`  (`_t 'optional'`)
+                           $_arg_kfile_desc
+
+OPTIONS:
+
+  -h|--help                `_t 'Display this help.'`
+
+ENDCAT
+    _t_STRING="`_t 'STRING'`"
+    _t_PATH="`_t 'PATH'`"
+    _t_DM_TARGET="`_t 'DM_TARGET'`"
+    _t_KEY_PATH="`_t 'KEY_PATH'`"
+
+    printf "  --encode $_t_STRING\n"
+    _opt_encode_desc="`_t "Encode the STRING to url format and print it.
+                           NOTE: Usefull to create a key path without spaces
+                           to use into '%s' at the third column."`"
+    _opt_encode_desc="`printf "$_opt_encode_desc\n" "$CRYPTTAB_FILE"`"
+    printf "${_USAGE_LEFT_MARGIN}$_opt_encode_desc\n\n"
+
+    printf "  --decode $_t_STRING\n"
+    _opt_decode_desc="`_t "Decode the STRING with url format then print it."`"
+    printf "${_USAGE_LEFT_MARGIN}$_opt_decode_desc\n\n"
+
+    printf "  --initramfs-hook [$_t_PATH]\n"
+    _opt_hook_desc="`_t   "Create an initramfs hook at specified path.
+                           PATH is optional. It defaults to:
+                             '%s'."`"
+    _opt_hook_desc="`printf "$_opt_hook_desc\n" "$INITRAMFS_HOOK_PATH_DEFAULT"`"
+    printf "${_USAGE_LEFT_MARGIN}$_opt_hook_desc\n\n"
+
+    printf "  --check-initramfs [$_t_PATH]\n"
+    _opt_ckinit_desc="`_t "Check that every requirements had been copied
+                           inside the initramfs specified.
+                           PATH is optional. It defaults to:
+                             '%s'."`"
+    _opt_ckinit_desc="`printf "$_opt_ckinit_desc\n" "$INITRAMFS_PATH_DEFAULT"`"
+    printf "${_USAGE_LEFT_MARGIN}$_opt_ckinit_desc\n\n"
+
+    printf "  --create-filter [$_t_PATH]\n"
+    _opt_filter_desc="`_t "Create a filter list based on current available
+                           devices (i.e.: produced by '%s').
+                           PATH is optional. It defaults to:
+                             '%s'."`"
+    _opt_filter_desc="`printf "$_opt_filter_desc\n" 'jmtpfs -l' "$MTP_FILTER_FILE"`"
+    printf "${_USAGE_LEFT_MARGIN}$_opt_filter_desc\n\n"
+
+    printf "  --add-mapping $_t_DM_TARGET $_t_KEY_PATH [encrypted]\n"
+    _opt_addmap_desc="`_t "Add a mapping between a DM target %s and a
+                           key path %s. The key might be encrypted in
+                           which case you need to specify it with '%s'.
+                           If the key path contains non-alphanum char it will be
+                           automatically url-encoded and added option '%s'.
+                           The mapping entry will be added to file:
+                             '%s'."`"
+    _opt_addmap_desc="`printf "$_opt_addmap_desc\n" "$_t_DM_TARGET" "$_t_KEY_PATH" 'encrypted' 'urlenc' "$MAPPING_FILE"`"
+    printf "${_USAGE_LEFT_MARGIN}$_opt_addmap_desc\n\n"
+
+    printf "  --check-mapping [$_t_PATH]\n"
+    _opt_ckmap_desc="`_t  "Check a mapping file.
+                           %s is optional. It defaults to:
+                             '%s'."`"
+    _opt_ckmap_desc="`printf "$_opt_ckmap_desc\n" 'PATH ' "$MAPPING_FILE"`"
+    printf "${_USAGE_LEFT_MARGIN}$_opt_ckmap_desc\n"
+
+    cat <<ENDCAT
+
+`_t 'ENV'`:
+
+ENDCAT
+    printf "  CRYPTTAB_KEY             "
+    _arg_kfile_name="`_t 'keyfile'`"
+    _env_cryptk_desc="`_t "A path to a key file.
+                           The env var is optional if the argument '%s'
+                           is specified, required otherwise.
+                           Same process apply as for the '%s' argument,
+                           i.e.: removing quotes, URL decoding and decrypting."`"
+    _env_cryptk_desc="`printf "$_env_cryptk_desc\n" "$_arg_kfile_name" "$_arg_kfile_name"`" 
+    printf "$_env_cryptk_desc\n\n"
+
+    printf "  crypttarget              "
+    _env_ctargt_desc="`_t "The target device mapper name (unlocked).
+                           It is used to do the mapping with a key if none is
+                           specified in the crypttab file, else informative only."`"
+    printf "$_env_ctargt_desc\n\n"
+    
+    printf "  cryptsource              `_t '(informative only) The disk source to unlock.'`\n\n"
+
+    cat <<ENDCAT
+`_t 'FILES'`:
+
+  `realpath "$0"`
+                           `_t 'This shell script (to be included in the initramfs)'`
+
+  $INITRAMFS_HOOK_PATH_DEFAULT
+                           `_t 'The default path to initramfs hook'`
+
+  $MTP_FILTER_FILE
+                           `_t 'The path to a list of filtered devices'`
+
+  $MAPPING_FILE
+                           `_t 'The path to a mapping file containing mapping between
+                           crypttab DM target entries and key (options and path).'`
+
+`_t 'EXAMPLES'`:
+
+ENDCAT
+    _ex_title="`_t "Encode a string to URL format to further add it to '%s'"`"
+    _ex_title="`printf "$_ex_title" "$CRYPTTAB_FILE"`"
+    printf "  # %s\n  > %s\n\n" "$_ex_title" "`basename "$0"` --encode 'relative/path to/key/file/on/usb/mtp/device'"
+
+    _ex_title="`_t 'Decode a URL encoded string, just to test'`"
+    printf "  # %s\n  > %s\n\n" "$_ex_title" "`basename "$0"` --decode 'relative/path%20to/key/file/on/usb/mtp/device'"
+
+    _ex_title="`_t 'Use this script as a standalone shell command to unlock a disk'`"
+    printf "  # %s\n  > %s\n\n" "$_ex_title" "crypttarget=md0_crypt cryptsource=/dev/disk/by-uuid/5163bc36 \\
+    `realpath "$0"` 'urlenc:M%c3%a9moire%20interne%2fkey.bin' \\
+    | cryptsetup open /dev/disk/by-uuid/5163bc36 md0_crypt"
+
+    _ex_title="`_t "A URL encoded key path, to prevent crashing on spaces and non-alphanum chars, in '%s'"`"
+    _ex_title="`printf "$_ex_title" "$CRYPTTAB_FILE"`"
+    printf "  # %s\n  %s\n\n" "$_ex_title" "md0_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=`realpath "$0"`,initramfs"
+
+    _ex_title="`_t "A URL encoded key path with 'encrypted' option, in '%s'"`"
+    _ex_title="`printf "$_ex_title" "$CRYPTTAB_FILE"`"
+    printf "  # %s\n  %s\n\n" "$_ex_title" "md0_crypt  UUID=5163bc36 'urlenc:pass:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=`realpath "$0"`,initramfs"
+
+    _ex_title="`_t "A '%s' entry configuration without any key (key will be specified in a mapping file)"`"
+    _ex_title="`printf "$_ex_title" "$CRYPTTAB_FILE"`"
+    printf "  # %s\n  %s\n\n" "$_ex_title" "md0_crypt  UUID=5163bc36   none  luks,keyscript=`realpath "$0"`,initramfs"
+
+    _ex_title="`_t 'Add the mapping between the DM target and the key (encrypted)'`"
+    printf "  # %s\n  > %s\n\n" "$_ex_title" "`basename "$0"` --add-mapping md0_crypt 'Mémoire interne/keyfile.bin' encrypted"
+
+    _ex_title="`_t "The command above will result in the following mapping entry in '%s'"`"
+    _ex_title="`printf "$_ex_title" "$MAPPING_FILE"`"
+    printf "  # %s\n  %s\n\n" "$_ex_title" "md0_crypt | urlenc,pass | M%c3%a9moire%20interne%2fkeyfile.bin"
+
+    _ex_title="`_t 'Check the mapping file syntax'`"
+    printf "  # %s\n  > %s\n\n" "$_ex_title" "`basename "$0"` --check-mapping"
+
+    _ex_title="`_t 'Create an initramfs hook to copy all required files in it'`"
+    printf "  # %s\n  > %s\n\n" "$_ex_title" "`basename "$0"` --initramfs-hook"
+
+    _ex_title="`_t 'Update the content of the initramfs'`"
+    printf "  # %s\n  > %s\n\n" "$_ex_title" "update-initramfs -tuck all"
+
+    _ex_title="`_t 'Check that every requirements had been copied inside initramfs'`"
+    printf "  # %s\n  > %s\n\n" "$_ex_title" "`basename "$0"` --check-initramfs"
+
+    _ex_title="`_t 'Reboot and pray hard!'`"
+    printf "  # %s ^^'\n  > %s\n\n" "$_ex_title" 'reboot'
+  
+    _ex_title="`_t 'Add a whitelist filter based on currently available MTP devices'`"
+    printf "  # %s\n  > %s\n  > %s\n\n" "$_ex_title" "sed 's/^MTP_FILTER_STRATEGY=.*/MTP_FILTER_STRATEGY=whitelist/' -i `realpath "$0"`" \
+                                                     "`basename "$0"` --create-filter"
+
+    _ex_title="`_t 'Enable debug mode, update initramfs, check it and reboot'`"
+    printf "  # %s\n  > %s\n  > %s\n\n" "$_ex_title" "sed 's/^DEBUG=.*/DEBUG=\\$TRUE/' -i `realpath "$0"`" \
+                                                     "update-initramfs -tuck all && `basename "$0"` --check-initramfs && reboot"
 }
 # create the content of an initramfs-tools hook shell script
 get_initramfs_hook_content()
@@ -252,7 +302,7 @@ check_initramfs()
     # kernel modules usb and fuse
     for _module in usb-common fuse; do
         if ! grep -q "${_module}\.ko" "$_tmpfile"; then
-            error "Kernel module '$_module' (${_module}\.ko) not found"
+            error "`_t "Kernel module '%s' (%s) not found"`" "$_module" "${_module}\.ko"
             _error_found=$TRUE
         fi
     done
@@ -260,33 +310,33 @@ check_initramfs()
     # libraries usb and fuse
     for _library in usb fuse; do
         if ! grep -q "lib${_library}\(-[0-9.]\+\)\?\.so" "$_tmpfile"; then
-            error "Library '$_library' (lib${_library}\(-[0-9.]\+\)\?\.so) not found"
+            error "`_t "Library '%s' (%s) not found"`" "$_library" "lib${_library}\(-[0-9.]\+\)\?\.so"
             _error_found=$TRUE
         fi
     done
 
     # jmtpfs binary
     if ! grep -q 'bin/jmtpfs' "$_tmpfile"; then
-        error "Binary 'jmtpfs' (bin/jmtpfs) not found"
+        error "`_t "Binary '%s' (%s) not found"`" 'jmtpfs' 'bin/jmtpfs'
         _error_found=$TRUE
     fi
 
     # /usr/share/misc/magic directory (required to prevent crashing jmtpfs
     # which depends on its existence, even empty)
     if ! grep -q 'usr/share/misc/magic' "$_tmpfile"; then
-        error "Directory 'magic' (usr/share/misc/magic) not found"
+        error "`_t "Directory '%s' (%s) not found"`" 'magic' 'usr/share/misc/magic'
         _error_found=$TRUE
     fi
 
     # this script
     if ! grep -q "`basename "$0" '.sh'`" "$_tmpfile"; then
-        error "Shell script '`basename "$0" '.sh'`' not found"
+        error "`_t "Shell script '%s' not found"`" "`basename "$0" '.sh'`"
         _error_found=$TRUE
     fi
 
     # keyctl binary (optional)
     if ! grep -q 'bin/keyctl' "$_tmpfile"; then
-        warning "Binary 'keyctl' (bin/keyctl) not found"
+        warning "`_t "Binary '%s' (%s) not found"`" 'keyctl' 'bin/keyctl'
     fi
 
     # remove temp file
@@ -294,13 +344,12 @@ check_initramfs()
 
     # on error
     if [ "$_error_found" = "$TRUE" ]; then
-        error "To further investigate, you can use this command to list files inside initramfs:
-> lsinitramfs "'"'"$1"'"'
+        error "`_t "To further investigate, you can use this command to list files inside initramfs:\n> %s"`" "lsinitramfs "'"'"$1"'"'
         return $FALSE
     fi
 
     # success
-    info "OK. Initramfs '$1' seems to contain every thing required."
+    info "`_t "OK. Initramfs '%s' seems to contain every thing required."`" "$1"
     return $TRUE
 }
 # URL encode a string (first and unique argument)
@@ -372,12 +421,12 @@ filter_devices()
                         #   or blacklist and device is not listed
                         if [ "$MTP_FILTER_STRATEGY" = "whitelist" -a "$_device_in_filter_list" = "$TRUE" ] \
                         || [ "$MTP_FILTER_STRATEGY" = "blacklist" -a "$_device_in_filter_list" = "$FALSE" ]; then
-                            debug "Allowing device '$_vendor_name, $_product_name' ($MTP_FILTER_STRATEGY filter)"
+                            debug "Allowing device '%s' (%s)" "$_vendor_name, $_product_name" "$MTP_FILTER_STRATEGY filter"
                             echo "$_line" >> "$_temp_file"
 
                         # filtered
                         else
-                            warning "Excluding device '$_vendor_name, $_product_name' ($MTP_FILTER_STRATEGY filter)"
+                            warning "`_t "Excluding device '%s' (%s)"`" "$_vendor_name, $_product_name" "$MTP_FILTER_STRATEGY filter"
                         fi
                     done
 
@@ -386,22 +435,22 @@ filter_devices()
 
                 # empty filter file
                 else
-                    debug "MTP device filter file '$MTP_FILTER_FILE' is empty"
+                    debug "MTP device filter file '%s' is empty" "$MTP_FILTER_FILE"
                 fi
 
             # no filter file
             else
-                debug "MTP device filter file '$MTP_FILTER_FILE' doesn't exist nor is readable"
+                debug "MTP device filter file '%s' doesn't exist nor is readable" "$MTP_FILTER_FILE"
             fi
 
         # invalid filter strategy
         else
-            warning "Invalid MTP device filter strategy '$MTP_FILTER_STRATEGY' (must be: whitelist|blacklist)"
+            warning "`_t "Invalid MTP device filter strategy '%s' (must be: %s)"`" "$MTP_FILTER_STRATEGY" 'whitelist|blacklist'
         fi
 
     # no device file
     else
-        error "MTP device list file '$1' doesn't exist nor is readable"
+        error "`_t "MTP device list file '%s' doesn't exist nor is readable"`" "$1"
         return $FALSE
     fi
 }
@@ -414,7 +463,7 @@ create_filter_list()
     |trim                                     \
     |sed 's/ MTP (ID[0-9]\+)$//g'; then
         cat "$_JMTPFS_ERROR_LOGFILE" >&2
-        error "Failed to create filter file '$1'"
+        error "`_t "Failed to create filter file '%s'"`" "$1"
         return $FALSE
     fi
 }
@@ -427,7 +476,7 @@ mount_mtp_device()
 {
     # create a mount point
     if [ ! -d "$1" ]; then
-        debug "Creating mount point '$1'"
+        debug "Creating mount point '%s'" "$1"
         mkdir -p -m 0700 "$1" >/dev/null
     fi
 
@@ -437,15 +486,15 @@ mount_mtp_device()
         # mount the device (read-only)
         if ! jmtpfs "$1" -o ro -device=$2 >/dev/null 2>"$_JMTPFS_ERROR_LOGFILE"; then
             cat "$_JMTPFS_ERROR_LOGFILE" >&2
-            error "'jmtpfs' failed to mount device '$3'"
+            error "`_t "%s failed to mount device '%s'"`" "'jmtpfs'" "$3"
             return $FALSE
         else
-            debug "Mounted device '$3'"
+            debug "Mounted device '%s'" "$3"
         fi
 
     # already mounted
     else
-        debug "Device '$3' is already mounted"
+        debug "Device '%s' is already mounted" "$3"
     fi
     return $TRUE
 }
@@ -457,14 +506,14 @@ unmount_mtp_device()
 {
     # if the device is mounted
     if mount|grep -q "jmtpfs.*$1"; then
-        debug "Unmounting device '$2'"
+        debug "Unmounting device '%s'" "$2"
         umount "$1"
     # not mounted
     else
-        debug "Device '$3' is already mounted"
+        debug "Device '%s' is already mounted" "$3"
     fi
     if [ -d "$1" ]; then
-        debug "Removing mount point '$1'"
+        debug "Removing mount point '%s'" "$1"
         rmdir "$1" >/dev/null||true
     fi
 }
@@ -474,32 +523,32 @@ unmount_mtp_device()
 check_mapping()
 {
     _parsing_success=$TRUE
-    debug "Parsing mapping file '$1' ..."
+    debug "Parsing mapping file '%s' ..." "$1"
     IFS_BAK="$IFS"
     IFS="
 "
     for _line in `grep -v '^#\|^[[:space:]]*$' "$1"`; do
         IFS="$IFS_BAK"
-        debug "Checking line: '$_line'"
+        debug "Checking line: '%s'" "$_line"
         if ! echo "$_line"|grep -q "$MAPPING_LINE_REGEXP"; then
-            error "Invalid line '$_line'"
+            error "`_t "Invalid line '%s'"`" "$_line"
             _parsing_success=$FALSE
         else
             _dm_target="`echo "$_line"|awk -F "$MAPPING_FILE_SEP" '{print $1}'|trim`"
             _key_opts="` echo "$_line"|awk -F "$MAPPING_FILE_SEP" '{print $2}'|trim`"
             _key_path="` echo "$_line"|awk -F "$MAPPING_FILE_SEP" '{print $3}'|trim`"
             if [ "$_dm_target" = '' ]; then
-                error "DM target is empty for mapping line '$_line'"
+                error "`_t "DM target is empty for mapping line '%s'"`" "$_line"
                 _parsing_success=$FALSE
             elif ! grep -q "^[[:space:]]*$_dm_target[[:space:]]" "$CRYPTTAB_FILE"; then
-                warning "DM target '$_dm_target' do not match any DM target in '$CRYPTTAB_FILE'"
+                warning "`_t "DM target '%s' do not match any DM target in '%s'"`" "$_dm_target" "$CRYPTTAB_FILE"
             fi
             if [ "$_key_path" = '' ]; then
-                error "Key path is empty for mapping line '$_line'"
+                error "`_t "Key path is empty for mapping line '%s'"`" "$_line"
                 _parsing_success=$FALSE
             fi
             if ! echo "$_key_opts"|grep -q "$MAPPING_OPTS_REGEXP"; then
-                error "Invalid key options '$_key_opts' for mapping line '$_line'"
+                error "`_t "Invalid key options '%s' for mapping line '%s'"`" "$_key_opts" "$_line"
                 _parsing_success=$FALSE
             fi
         fi
@@ -516,7 +565,7 @@ check_mapping()
 # $4  string  (optional) 'encrypted' to mean that the key is encrypted
 add_mapping()
 {
-    debug "Adding mapping entry '$*' to file '$1' ..."
+    debug "Adding mapping entry '%s' to file '%s' ..." "$*" "$1"
     _mapping_file="$1"
     _dm_target="$2"
     _key_path="$3"
@@ -527,23 +576,23 @@ add_mapping()
     if [ ! -e "$_mapping_file" ]; then
 
         # create it
-	debug "Creating mapping file '$_mapping_file'"
+	debug "Creating mapping file '%s'" "$_mapping_file"
         touch "$_mapping_file"
     fi
 
     # an entry already exists for this DM target
     _override_mapping=
     if grep -q "^[[:space:]]*$_dm_target[[:space:]]" "$_mapping_file"; then
-        warning "DM target '$_dm_target' already have a mapping"
+        warning "`_t "DM target '%s' already have a mapping"`" "$_dm_target"
         while ! echo "$_override_mapping"|grep -q '^[yYnN]$'; do
-            info "Override the mapping for DM target '$_dm_target' [Y/n] ?"
+            info "`_t "Override the mapping for DM target '%s' [Y/n] ?"`" "$_dm_target"
             read _override_mapping
             if [ "$_override_mapping" = '' ]; then
                 _override_mapping=Y
             fi
         done
         if [ "$_override_mapping" != 'y' -a "$_override_mapping" != 'Y' ]; then
-            info "Aborting."
+            info "`_t "Aborting."`"
             exit 0
         fi
     fi
@@ -552,31 +601,31 @@ add_mapping()
     if ! echo "$2"|grep -q '^[a-z0-9]\+$'; then
         _key_path="`urlencode "$_key_path"`"
         _key_opts="`if [ "$_key_opts" != '' ]; then echo "$_key_opts,"; fi`urlenc"
-        debug "Encoded key path to '$_key_path'"
+        debug "Encoded key path to '%s'" "$_key_path"
         debug "Added 'urlenc' key option"
     fi
 
     # write the entry to the file
     _line="`echo "$_dm_target $MAPPING_FILE_SEP $_key_opts $MAPPING_FILE_SEP $_key_path"|sed 's/|/\\|/g'`"
-    debug "Entry line: '$_line'"
+    debug "Entry line: '%s'" "$_line"
     if [ "$_override_mapping" = 'y' -o "$_override_mapping" = 'Y' ]; then
-        debug "Overriding the mapping for DM target '$_dm_target'"
+        debug "Overriding the mapping for DM target '%s'" "$_dm_target"
         sed "s#^[[:space:]]*$_dm_target[[:space:]].*#$_line#g" -i "$_mapping_file"
     else
-        debug "Appending the mapping for DM target '$_dm_target'"
+        debug "Appending the mapping for DM target '%s'" "$_dm_target"
         echo "$_line" >> "$_mapping_file"
     fi
 }
 # print the content of the key file specified
 use_keyfile()
 {
-    debug "Using key file '$1'"
+    debug "Using key file '%s'" "$1"
     _backup="`if [ "$1" = "$KEYFILE_BAK" ]; then echo ' backup'; fi`"
     _msg="Unlocking '$crypttarget' with$_backup key file '`basename "$1"`' ..."
     if [ "$DISPLAY_KEY_FILE" = "$FALSE" ]; then
         _msg="Unlocking '$crypttarget' with$_backup key file ..."
     fi
-    info "$_msg"
+    info "`_t "$_msg"`"
     cat "$1"
 }
 # fall back helper, that first try a backup key file then askpass
@@ -608,23 +657,34 @@ simplify_name()
     sed 's/[[:blank:]]*\(MTP\|ID[0-9]\+\)[[:blank:]]*//g;s/[[:blank:]]*([^)]*)[[:blank:]]*$//g'
 }
 # helper function to print messages
+_t()
+{
+    "$_GETTEXT" "$1"
+}
 debug()
 {
     if [ "$DEBUG" = "$TRUE" ]; then
-        echo $2 "[DEBUG] $1" >&2
+        echo -n "[DEBUG] " >&2
+        printf "$@" >&2
+        echo >&2
     fi
 }
 info()
 {
-    echo $2 "$1" >&2
+    printf "$@" >&2
+    echo >&2
 }
 warning()
 {
-    echo $2 "WARNING: $1" >&2
+    echo -n "WARNING: " >&2
+    printf "$@" >&2
+    echo >&2
 }
 error()
 {
-    echo $2 "ERROR: $1" >&2
+    echo -n "ERROR: " >&2
+    printf "$@" >&2
+    echo >&2
 }
 
 
@@ -656,17 +716,18 @@ if [ "$1" = '--initramfs-hook' ]; then
         _hook_path="$2"
     fi
     if [ -e "$_hook_path" ]; then
-        error "Initramfs hook file '$_hook_path' already exists"
+        error "`_t "Initramfs hook file '%s' already exists"`" "$_hook_path"
         exit 2
     fi
     _hook_dir_path="`dirname "$_hook_path"`"
     if [ ! -d "$_hook_dir_path" ]; then
+        debug "Creating directory '%s' (mode %s)" "$_hook_dir_path" '0755'
         mkdir -p -m 0755 "$_hook_dir_path"
     fi
     get_initramfs_hook_content > "$_hook_path"
     chmod +x "$_hook_path"
-    info "Initramfs hook shell script created at '$_hook_path'."
-    info "You should execute 'update-initramfs -tuck all' now."
+    info "`_t "Initramfs hook shell script created at '%s'."`" "$_hook_path"
+    info "`_t "You should execute '%s' now."`" 'update-initramfs -tuck all'
     exit 0
 fi
 
@@ -677,7 +738,7 @@ if [ "$1" = '--check-initramfs' ]; then
         _initramfs_path="$2"
     fi
     if [ ! -r "$_initramfs_path" ]; then
-        error "Initramfs file '$_initramfs_path' doesn't exist or isn't readable"
+        error "`_t "Initramfs file '%s' doesn't exist or isn't readable"`" "$_initramfs_path"
         exit 2
     fi
     check_initramfs "$_initramfs_path"
@@ -691,11 +752,12 @@ if [ "$1" = '--create-filter' ]; then
         _filter_path="$2"
     fi
     if [ -e "$_filter_path" ]; then
-        error "Filter file '$_filter_path' already exists"
+        error "`_t "Filter file '%s' already exists"`" "$_filter_path"
         exit 2
     fi
     _filter_dir_path="`dirname "$_filter_path"`"
     if [ ! -d "$_filter_dir_path" ]; then
+        debug "Creating directory '%s' (mode %s)" "$_filter_dir_path" '0755'
         mkdir -p -m 0640 "$_filter_dir_path"
     fi
     create_filter_list > "$_filter_path"
@@ -709,7 +771,7 @@ if [ "$1" = '--check-mapping' ]; then
         _initramfs_path="$2"
     fi
     if [ ! -r "$_mapping_path" ]; then
-        error "Mapping file '$_mapping_path' doesn't exist or isn't readable"
+        error "`_t "Mapping file '%s' doesn't exist or isn't readable"`" "$_mapping_path"
         exit 2
     fi
     check_mapping "$_mapping_path"
@@ -719,22 +781,22 @@ fi
 # add a mapping entry
 if [ "$1" = '--add-mapping' ]; then
     if [ "$2" = '' -o "$3" = '' ]; then
-        error "Too few arguments for option '--add-mapping'"
+        error "`_t "Too few arguments for option '%s'"`" '--add-mapping'
         usage
         exit 1
     fi
     if [ "$4" != '' -a "$4" != 'encrypted' ]; then
-        error "Invalid argument '$4' for option '--add-mapping'"
+        error "`_t "Invalid argument '%s' for option '%s'"`" "$4" '--add-mapping'
         usage
         exit 1
     fi
     if ! grep -q "^[[:space:]]*$2[[:space:]]" "$CRYPTTAB_FILE"; then
-        warning "DM target '$2' do not match any DM target in '$CRYPTTAB_FILE'"
+        warning "`_t "DM target '%s' do not match any DM target in '%s'"`" "$2" "$CRYPTTAB_FILE"
     fi
     for i in 2 3 4; do
         eval _v=\$$i
         if echo "$_v"|grep -q "$MAPPING_FILE_SEP"; then
-            error "Value '$_v' cannot contain mapping file separator '$MAPPING_FILE_SEP'"
+            error "`_t "Value '%s' cannot contain mapping file separator '%s'"`" "$_v" "$MAPPING_FILE_SEP"
             exit 2
         fi
     done
@@ -754,30 +816,30 @@ fi
 
 # key is not specified but the DM target is specified
 if [ "$CRYPTTAB_KEY" = '' -a "$crypttarget" != '' ]; then
-    debug "No CRYPTTAB_KEY specified but a DM target '$crypttarget'"
+    debug "No CRYPTTAB_KEY specified but a DM target '%s'" "$crypttarget"
 
     # there is a mapping file
     if [ -r "$MAPPING_FILE" ]; then
-        debug "Mapping file '$MAPPING_FILE' found"
+        debug "Mapping file '%s' found" "$MAPPING_FILE"
 
         # a line match in the mapping file
         _matching_line="`grep "^[[:space:]]*$crypttarget[[:space:]]" "$MAPPING_FILE"|tail -n 1||true`"
         if [ "$_matching_line" != '' ]; then
-            debug "Matching line '$_matching_line' found"
+            debug "Matching line '%s' found" "$_matching_line"
             _key_opts="` echo "$_matching_line"|awk -F "$MAPPING_FILE_SEP" '{print $2}'|trim`"
             _key_path="` echo "$_matching_line"|awk -F "$MAPPING_FILE_SEP" '{print $3}'|trim`"
-            debug "Key options: '$_key_opts'"
-            debug "Key path: '$_key_path'"
+            debug "Key options: '%s'" "$_key_opts"
+            debug "Key path: '%s'" "$_key_path"
 
             # build a key value from it
             CRYPTTAB_KEY="$_key_path"
             if [ "$_key_opts" != '' ]; then
                 CRYPTTAB_KEY="`echo "$_key_opts"|sed -e 's/[,; ]/:/g' -e 's/:\+/:/g'`:$CRYPTTAB_KEY"
             fi
-            debug "New CRYPTTAB_KEY: '$CRYPTTAB_KEY'"
+            debug "New CRYPTTAB_KEY: '%s'" "$CRYPTTAB_KEY"
         fi
     else
-        debug "No mapping file '$MAPPING_FILE' found"
+        debug "No mapping file '%s' found" "$MAPPING_FILE"
     fi
 fi
 
@@ -819,10 +881,10 @@ fi
 
 # check for 'keyctl' binary existence
 if [ "$KERNEL_CACHE_ENABLED" = "$TRUE" ] && ! which keyctl >/dev/null; then
-    warning "'keyctl' binary not found"
-    warning "On Debian you can install it with: > apt install keyutils"
+    warning "`_t "'%s' binary not found"`" 'keyctl'
+    warning "`_t "On Debian you can install it with: > %s"`" 'apt install keyutils'
     KERNEL_CACHE_ENABLED=$FALSE
-    warning "Key caching is disabled"
+    warning "`_t "Key caching is disabled"`"
 fi
 
 # caching is enabled
@@ -838,13 +900,13 @@ if [ "$KERNEL_CACHE_ENABLED" = "$TRUE" ]; then
     if [ "$_key_id" = '' ]; then
         _key_id="$CRYPTTAB_KEY"
     fi
-    debug "Key ID '$_key_id'"
+    debug "Key ID '%s'" "$_key_id"
     _k_id="`keyctl search @u user "$_key_id" 2>/dev/null||true`"
     if [ "$_k_id" != '' ]; then
 
         # use it
-        debug "Using cached key '$_key_id' ($_k_id)"
-        info "Unlocking '$crypttarget' with cached key '$_k_id' ..."
+        debug "Using cached key '%s' (%s)" "$_key_id" "$_k_id"
+        info "`_t "Unlocking '%s' with cached key '%s' ..."`" "$crypttarget" "$_k_id"
         keyctl pipe "$_k_id"
         exit 0
     fi
@@ -852,22 +914,22 @@ fi
 
 # check for 'jmtpfs' binary existence
 if ! which jmtpfs >/dev/null; then
-    error "'jmtpfs' binary not found"
-    error "On Debian you can install it with: > apt install jmtpfs"
+    error "`_t "'%s' binary not found"`" 'jmtpfs'
+    error "`_t "On Debian you can install it with: > %s"`" 'apt install jmtpfs'
     exit 2
 fi
 
 # ensure usb_common and fuse modules are runing
 for _module in usb_common fuse; do
     if [ "`modprobe -nv $_module 2>&1||true`" != '' ]; then
-        debug "Loading kernel module '$_module'"
+        debug "Loading kernel module '%s'" "$_module"
     fi
     modprobe -q $_module
 done
 
 # setup flag file to skip devices
 if ! touch "$_FLAG_MTP_DEVICES_TO_SKIP"; then
-    warning "Failed to create file '$_FLAG_MTP_DEVICES_TO_SKIP'"
+    warning "`_t "Failed to create file '%s'"`" "$_FLAG_MTP_DEVICES_TO_SKIP"
 fi
 
 # wait for an MTP device to be available
@@ -875,7 +937,7 @@ if [ ! -e "$_FLAG_WAITED_FOR_DEVICE_ALREADY" ]; then
     sleep $MTP_SLEEP_SEC_BEFORE_WAIT >/dev/null
     _device_availables="`mtp_device_availables||true`"
     if [ "$_device_availables" = '' ]; then
-        info "Waiting for an MTP device to become available (max ${MTP_WAIT_MAX}s) ..."
+        info "`_t "Waiting for an MTP device to become available (max ${MTP_WAIT_MAX}s) ..."`"
         for i in `seq $MTP_WAIT_TIME $MTP_WAIT_TIME $MTP_WAIT_MAX`; do
             _device_availables="`mtp_device_availables||true`"
             if [ "$_device_availables" != '' ]; then
@@ -886,7 +948,7 @@ if [ ! -e "$_FLAG_WAITED_FOR_DEVICE_ALREADY" ]; then
         done
     fi
     if [ "$_device_availables" = '' ]; then
-        warning "No MTP device available (after ${MTP_WAIT_MAX}s timeout)"
+        warning "`_t "No MTP device available (after ${MTP_WAIT_MAX}s timeout)"`"
     fi
     touch "$_FLAG_WAITED_FOR_DEVICE_ALREADY"
 else
@@ -898,7 +960,7 @@ _result_file="`mktemp`"
 
 # for every MTP device
 { cat "$_MTP_DEVICE_LIST_OUT" | while read _line; do
-    debug "Device line: '$_line'"
+    debug "Device line: '%s'" "$_line"
 
     # decompose line data
     _bus_num="`     echo "$_line"|awk -F ',' '{print $1}'|trim`"
@@ -916,13 +978,13 @@ _result_file="`mktemp`"
 
     # device to skip
     if grep -q "^$_device_unique_id" "$_FLAG_MTP_DEVICES_TO_SKIP"; then
-        debug "Skipping device '${_vendor_name}, ${_product_name}' (listed as skipped already)"
+        debug "Skipping device '%s' (listed as skipped already)" "${_vendor_name}, ${_product_name}"
         continue
     fi
 
     # mount the device
     if ! mount_mtp_device "$_mount_path" "${_bus_num},${_device_num}" "${_vendor_name}, ${_product_name}"; then
-        debug "Skipping device '${_vendor_name}, ${_product_name}' (mount failure)"
+        debug "Skipping device '%s' (mount failure)" "${_vendor_name}, ${_product_name}"
         continue
     fi
 
@@ -932,12 +994,12 @@ _result_file="`mktemp`"
 
         # assuming the device is locked (and need user manual unlocking)
         # so ask the user to do so, and wait for its input to continue or skip
-        info "Please unlock the device '${_vendor_name}, ${_product_name}', then hit enter ... ('s' to skip)"
+        info "`_t "Please unlock the device '%s', then hit enter ... ('s' to skip)"`" "${_vendor_name}, ${_product_name}"
         read unlocked >/dev/null <&3
 
         # skip unlocking (give up)
         if [ "$unlocked" = 's' -o "$unlocked" = 'S' ]; then
-            info "Skipping unlocking device '${_vendor_name}, ${_product_name}'"
+            info "`_t "Skipping unlocking device '%s'"`" "${_vendor_name}, ${_product_name}"
 
         # device should be unlocked
         else
@@ -960,8 +1022,8 @@ _result_file="`mktemp`"
 
     # no access => give up
     else
-        warning "Filesystem of device '${_vendor_name}, ${_product_name}' is not accessible"
-        warning "Skipping device '${_vendor_name}, ${_product_name}' (filesystem unaccessible)"
+        warning "`_t "Filesystem of device '%s' is not accessible"`" "${_vendor_name}, ${_product_name}"
+        warning "`_t "Ignoring device '%s' (filesystem unaccessible)"`" "${_vendor_name}, ${_product_name}"
         echo "$_device_unique_id" >> "$_FLAG_MTP_DEVICES_TO_SKIP"
         unmount_mtp_device "$_mount_path"  "${_vendor_name}, ${_product_name}"
         continue
@@ -970,13 +1032,13 @@ _result_file="`mktemp`"
     # try to get the key file
     _keyfile_path="$_mount_path"/"$CRYPTTAB_KEY"
     if [ ! -e "$_keyfile_path" ]; then
-        debug "Keyfile '$_keyfile_path' not found"
+        debug "Keyfile '%s' not found" "$_keyfile_path"
         _keyfile_path="`realpath "$_mount_path"/*/"$CRYPTTAB_KEY" 2>/dev/null||true`"
     fi
 
     # key file found
     if [ "$_keyfile_path" != '' -a -e "$_keyfile_path" ]; then
-        debug "Found cryptkey at '$_keyfile_path'"
+        debug "Found cryptkey at '%s'" "$_keyfile_path"
         _keyfile_to_use="$_keyfile_path"
 
         # passphrase protected
@@ -990,15 +1052,15 @@ _result_file="`mktemp`"
 
             # name the device mapper
             _device_mapper_name="`basename "$_keyfile_path"|sed -e 's/\./-/g' -e 's/[^a-zA-Z0-9_+ -]//g;s/[[:blank:]]\+/-/g'`_crypt"
-            debug "Device mapper name is: '$_device_mapper_name'"
+            debug "Device mapper name is: '%s'" "$_device_mapper_name"
 
             # ask for passphrase
             _key_decrypted=$FALSE
             debug "Key is passphrase protected, so trying to decrypt it by asking the user"
             if ! cryptsetup open --readonly "$_keyfile_path" "$_device_mapper_name" >/dev/null <&3; then
-                error "Failed to decrypt key '`basename "$_keyfile_path"`' with cryptsetup"
+                error "`_t "Failed to decrypt key '%s' with cryptsetup"`" "`basename "$_keyfile_path"`"
             elif [ ! -e "/dev/mapper/$_device_mapper_name" ]; then
-                error "Key decrypted but device mapper '/dev/mapper/$_device_mapper_name' doesn't exists! Bug?"
+                error "`_t "Key decrypted but device mapper '%s' doesn't exists! Bug?"`" "/dev/mapper/$_device_mapper_name"
             else
                 debug "Key successfully decrypted"
                 _key_decrypted=$TRUE
@@ -1024,17 +1086,17 @@ _result_file="`mktemp`"
 
             # caching failed
             if [ "$_k_id" = '' ]; then
-                warning "Failed to add key '$_key_id' to kernel cache"
+                warning "`_t "Failed to add key '%s' to kernel cache"`" "$_key_id"
 
                 # it might be because the data content exceeds the cache max size
                 _key_content_size="`du -sk "$_keyfile_to_use"|awk '{print $1}'||true`"
                 if [ "$_key_content_size" != '' -a "$_key_content_size" -ge "$KERNEL_CACHE_MAX_SIZE_KB" ]; then
-                    warning "Key content size '$_key_content_size' exceeds cache max size of '$KERNEL_CACHE_MAX_SIZE_KB'"
-                    warning "The content for key '$_key_id' cannot be cached"
+                    warning "`_t "Key content size '%s' exceeds cache max size of '%s'"`" "$_key_content_size" "$KERNEL_CACHE_MAX_SIZE_KB"
+                    warning "`_t "The content for key '%s' cannot be cached"`" "$_key_id"
                 elif [ "$_key_content_size" != '' ]; then
-                    error "Uh, I do not understand the cause of failure (bug?), sorry"
+                    error "`_t "Uh, I do not understand the cause of failure (bug?), sorry"`"
                 else
-                    error "Failed to get file size of '$_keyfile_to_use'"
+                    error "`_t "Failed to get file size of '%s'"`" "$_keyfile_to_use"
                 fi
             fi
 
@@ -1043,14 +1105,14 @@ _result_file="`mktemp`"
 
                 # set timeout (or remove the key in case of failure)
                 if ! keyctl timeout "$_k_id" "$KERNEL_CACHE_TIMEOUT_SEC"; then
-                    error "Failed to set timeout on cached key '$_k_id'"
-                    error "Removing key '$_k_id' from cache"
+                    error "`_t "Failed to set timeout on cached key '%s'"`" "$_k_id"
+                    error "`_t "Removing key '%s' from cache"`" "$_k_id"
                     keyctl unlink "$_k_id" @u
                 else
-                    debug "Cached key at ID '$_k_id'"
+                    debug "Cached key at ID '%s'" "$_k_id"
                 fi
             else
-                error "Failed to add key '$_key_id' to kernel cache"
+                error "`_t "Failed to add key '%s' to kernel cache"`" "$_key_id"
             fi
         fi
 
@@ -1062,7 +1124,7 @@ _result_file="`mktemp`"
         if [ "$_PASSPHRASE_PROTECTED" = "$TRUE" ] && echo "$_keyfile_to_use"|grep -q '^/dev/mapper/'; then
 
             # close the device mapper
-            debug "Closing the device mapper '$_keyfile_to_use'"
+            debug "Closing the device mapper '%s'" "$_keyfile_to_use"
             cryptsetup close "$_keyfile_to_use"
         fi
 
@@ -1073,7 +1135,7 @@ _result_file="`mktemp`"
         exit 0
 
     elif [ "$_keyfile_path" != '' ]; then
-        debug "Keyfile '$_keyfile_path' not found"
+        debug "Keyfile '%s' not found" "$_keyfile_path"
     fi
 
     # umount the device
