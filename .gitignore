@@ -1,3 +1,6 @@
 locale/*/LC_MESSAGES/messages.mo
 locale/*/LC_MESSAGES/messages.po~
-messages.pot
+man
+*.pot
+*~
+*.swp
