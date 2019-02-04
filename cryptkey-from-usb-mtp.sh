@@ -26,7 +26,7 @@ TRUE=0
 FALSE=1
 
 # configuration
-DEBUG=$TRUE
+DEBUG=$FALSE
 DISPLAY_KEY_FILE=$FALSE
 KEYFILE_BAK=/crypto_keyfile.bin
 MOUNT_BASE_DIR=/mnt
@@ -74,24 +74,20 @@ _PASSPHRASE_PROTECTED=$FALSE
 _PRINTF="`which printf`"
 _GETTEXT="`which gettext 2>/dev/null||which echo`"
 _USAGE_LEFT_MARGIN='            '
+_TEXINFO=$FALSE
 
 # usage
-# $1  bool  if TRUE (0) tries to produce a Texinfo compatible output
+#   ENV: if "$_TEXINFO" is TRUE (0) it produce a Texinfo compatible output
 usage()
 {
-    _texinfo="$1"
+    # pre-translate some redundant strings
     _t_STRING="`_t 'STRING'`"
     _t_PATH="`_t 'PATH'`"
     _t_DM_TARGET="`_t 'DM_TARGET'`"
     _t_KEY_PATH="`_t 'KEY_PATH'`"
     _arg_kfile_name="`_t 'keyfile'`"
 
-    if [ "$_texinfo" = "$TRUE" ]; then
-        _USAGE_LEFT_MARGIN=
-        echo ".TH `echo "$_THIS_FILENAME"|tr '[[:lower:]]' '[[:upper:]]'` \"8\" \"`date '+%B %Y'`\" \"$PACKAGE_NAME $VERSION\" \"`_t 'System Administration Utilities'`\""
-        echo "`_t 'NAME'|texinfo_section`"
-    fi
-
+    # display the usage (translations are inlined)
     cat <<ENDCAT
  
 $_THIS_FILENAME - `_t 'Print a key to STDOUT from a key file stored on a USB MTP device.'`
@@ -100,18 +96,18 @@ $_THIS_FILENAME - `_t 'Print a key to STDOUT from a key file stored on a USB MTP
  
     $_THIS_FILENAME `_t 'OPTIONS'`... [`_t 'keyfile'`]
  
-    $_THIS_FILENAME --encode $_t_STRING`[ ! "$_texinfo" ] || echo "\n.PP"`
+    $_THIS_FILENAME --encode $_t_STRING`texinfo_re`
     $_THIS_FILENAME --decode $_t_STRING
  
-    $_THIS_FILENAME --initramfs-hook [$_t_PATH]`[ ! "$_texinfo" ] || echo "\n.PP"`
+    $_THIS_FILENAME --initramfs-hook [$_t_PATH]`texinfo_re`
     $_THIS_FILENAME --check-initramfs [$_t_PATH]
  
     $_THIS_FILENAME --create-filter [$_t_PATH]
  
-    $_THIS_FILENAME --check-mapping [$_t_PATH]`[ ! "$_texinfo" ] || echo "\n.PP"`
+    $_THIS_FILENAME --check-mapping [$_t_PATH]`texinfo_re`
     $_THIS_FILENAME --add-mapping $_t_DM_TARGET $_t_KEY_PATH [encrypted]
  
-    $_THIS_FILENAME [-h|--help]`[ ! "$_texinfo" ] || echo "\n.PP"`
+    $_THIS_FILENAME [-h|--help]`texinfo_re`
     $_THIS_FILENAME -v|--version
  
     $_THIS_FILENAME --texinfo
@@ -253,53 +249,53 @@ $_USAGE_LEFT_MARGIN`_t 'The path to a mapping file containing mapping between cr
  
 `_t 'EXAMPLES'|texinfo_section`
  
-    `_t "Encode a string to URL format to further add it to '%s'" "$CRYPTTAB_FILE"|comment`"
+    `_t "Encode a string to URL format to further add it to '%s'" "$CRYPTTAB_FILE"|comment`"`texinfo_re`
     > $_THIS_FILENAME --encode 'relative/path to/key/file/on/usb/mtp/device'
  
-    `_t 'Decode a URL encoded string, just to test'|sed 's/^/# /'`
+    `_t 'Decode a URL encoded string, just to test'|comment``texinfo_re`
     > $_THIS_FILENAME --decode 'relative/path%20to/key/file/on/usb/mtp/device'
  
-    `_t 'Use this script as a standalone shell command to unlock a disk'|comment`
-    > crypttarget=md0_crypt cryptsource=/dev/disk/by-uuid/5163bc36 \\
-         $_THIS_REALPATH 'urlenc:M%c3%a9moire%20interne%2fkey.bin' \\
+    `_t 'Use this script as a standalone shell command to unlock a disk'|comment``texinfo_re`
+    > crypttarget=md0_crypt cryptsource=/dev/disk/by-uuid/5163bc36 `texinfo_escape``texinfo_re`
+         $_THIS_REALPATH 'urlenc:M%c3%a9moire%20interne%2fkey.bin' `texinfo_escape``texinfo_re`
     | cryptsetup open /dev/disk/by-uuid/5163bc36 md0_crypt
  
-    `_t "A URL encoded key path, to prevent crashing on spaces and non-alphanum chars, in '%s'" "$CRYPTTAB_FILE"|comment`
+    `_t "A URL encoded key path, to prevent crashing on spaces and non-alphanum chars, in '%s'" "$CRYPTTAB_FILE"|comment``texinfo_re`
     md0_crypt  UUID=5163bc36 'urlenc:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=${_THIS_REALPATH},initramfs
  
-    `_t "A URL encoded key path with 'encrypted' option, in '%s'" "$CRYPTTAB_FILE"|comment`
+    `_t "A URL encoded key path with 'encrypted' option, in '%s'" "$CRYPTTAB_FILE"|comment``texinfo_re`
     md0_crypt  UUID=5163bc36 'urlenc:pass:M%c3%a9moire%20interne%2fkeyfile.bin' luks,keyscript=${_THIS_REALPATH},initramfs
  
-    `_t "A '%s' entry configuration without any key (key will be specified in a mapping file)" "$CRYPTTAB_FILE"|comment`
+    `_t "A '%s' entry configuration without any key (key will be specified in a mapping file)" "$CRYPTTAB_FILE"|comment``texinfo_re`
     md0_crypt  UUID=5163bc36   none  luks,keyscript=${_THIS_REALPATH},initramfs
  
-    `_t 'Add the mapping between the DM target and the key (encrypted)'|comment`
+    `_t 'Add the mapping between the DM target and the key (encrypted)'|comment``texinfo_re`
     > $_THIS_FILENAME --add-mapping md0_crypt 'Mémoire interne/keyfile.bin' encrypted
  
-    `_t "The command above will result in the following mapping entry in '%s'" "$MAPPING_FILE"|comment`
+    `_t "The command above will result in the following mapping entry in '%s'" "$MAPPING_FILE"|comment``texinfo_re`
     md0_crypt | urlenc,pass | M%c3%a9moire%20interne%2fkeyfile.bin
  
-    `_t 'Check the mapping file syntax'|comment`
+    `_t 'Check the mapping file syntax'|comment``texinfo_re`
     > $_THIS_FILENAME --check-mapping
  
-    `_t 'Create an initramfs hook to copy all required files in it'|comment`
+    `_t 'Create an initramfs hook to copy all required files in it'|comment``texinfo_re`
     > $_THIS_FILENAME --initramfs-hook
  
-    `_t 'Update the content of the initramfs'|comment`
+    `_t 'Update the content of the initramfs'|comment``texinfo_re`
     > update-initramfs -tuck all
  
-    `_t 'Check that every requirements had been copied inside initramfs'|comment`
+    `_t 'Check that every requirements had been copied inside initramfs'|comment``texinfo_re`
     > $_THIS_FILENAME --check-initramfs
  
-    `_t 'Reboot and pray hard!'|comment`
+    `_t 'Reboot and pray hard!'|comment``texinfo_re`
     > reboot'
-   
-    `_t 'Add a whitelist filter based on currently available MTP devices'|comment`
-    > sed 's/^MTP_FILTER_STRATEGY=.*/MTP_FILTER_STRATEGY=whitelist/' -i "$_THIS_REALPATH"
+ 
+    `_t 'Add a whitelist filter based on currently available MTP devices'|comment``texinfo_re`
+    > sed 's/^MTP_FILTER_STRATEGY=.*/MTP_FILTER_STRATEGY=whitelist/' -i "$_THIS_REALPATH"`texinfo_re`
     > $_THIS_FILENAME --create-filter
  
-    `_t 'Enable debug mode, update initramfs, check it and reboot'|comment`
-    > sed 's/^DEBUG=.*/DEBUG=\\\$TRUE/' -i "$_THIS_REALPATH"
+    `_t 'Enable debug mode, update initramfs, check it and reboot'|comment``texinfo_re`
+    > sed 's/^DEBUG=.*/DEBUG=\\\$TRUE/' -i "$_THIS_REALPATH"`texinfo_re`
     > update-initramfs -tuck all && $_THIS_FILENAME --check-initramfs && reboot
  
 `_t 'AUTHORS'|texinfo_section`
@@ -343,28 +339,45 @@ warranty()
 {
     echo "`_t "There is NO WARRANTY, to the extent permitted by law."`"
 }
-# display a texinfo section (if $_texinfo is $TRUE), else display input as is
+# display a texinfo section surrounded by PP and RE items (if $_TEXINFO is $TRUE)
+# else display input as is
 texinfo_section()
 {
-    if [ "$_texinfo" = "$TRUE" ]; then
-        texinfo_item 'PP'
+    if [ "$_TEXINFO" = "$TRUE" ]; then
         printf '.SH '
     fi
     cat -
-    texinfo_item 'PP'
 }
-# display a texinfo item (if $_texinfo is $TRUE), else do nothing
+# display a texinfo item (if $_TEXINFO is $TRUE), else do nothing
+# $1  string  the item/MACRO code to print
 texinfo_item()
 {
-    if [ "$_texinfo" = "$TRUE" ]; then
+    if [ "$_TEXINFO" = "$TRUE" ]; then
         printf '.%s\n' "$1"
     fi
 }
-# display a texinfo font (if $_texinfo is $TRUE), else do nothing
+# display a texinfo font (if $_TEXINFO is $TRUE), else do nothing
 texinfo_font()
 {
-    if [ "$_texinfo" = "$TRUE" ]; then
+    if [ "$_TEXINFO" = "$TRUE" ]; then
         printf '\\f%s' "$1"
+    fi
+}
+# display a line break and a texinfo restore (if $_TEXINFO is $TRUE)
+texinfo_re()
+{
+    if [ "$_TEXINFO" = "$TRUE" ]; then
+        printf '\n'
+    fi
+    texinfo_item 'RE'
+}
+# display an escape charactere (depending on $_TEXINFO being $TRUE)
+texinfo_escape()
+{
+    if [ "$_TEXINFO" = "$TRUE" ]; then
+        printf '\\\\\\\\\\'
+    else
+        printf '\\'
     fi
 }
 # create the content of an initramfs-tools hook shell script
@@ -820,7 +833,15 @@ error()
 
 # produce a Texinfo formatted help (for man pages)
 if [ "$1" = '--texinfo' ]; then
-    _usage="`usage "$TRUE"|sed -e '3,$ s/-/\\-/g' -e 's/^[[:blank:]]*$/.PP/g'`"
+    _TEXINFO=$TRUE
+
+    # remove left margin before calling 'usage' command
+    _USAGE_LEFT_MARGIN=
+
+    # get the usage in Texinfo mode (because env var $_TEXINFO is $TRUE)
+    _usage="`usage|sed -e '3,$ s/-/\\-/g' -e 's/^[[:blank:]]*$/.PP/g'`"
+
+    # do some tweakings (bold fonts addition and margin removal)
     _section_usage="\\.SH `_t 'USAGE'`"
     _section_environment="\\.SH `_t 'ENVIRONMENT'`"
     _section_synopsis=".SH `_t 'SYNOPSIS'`"
@@ -828,6 +849,10 @@ if [ "$1" = '--texinfo' ]; then
                                 -e '/^'"$_section_usage"'$/,/^'"$_section_environment"'$/ s/\(^\| \)\(\[\)\?\(--\?[^] ]\+\)\(\]\)\?/\1\2\\\\\\\\fB\3\\\\\\\\fR\4/g' \
                                 -e 's/\(\\\\\\\\fB[^] ]\+\)|\([^] ]\+\\\\\\\\fR\)/\1\\\\\\\\fR|\\\\\\\\fB\2/g' \
                                 -e 's/^'"$_section_usage"'$/'"$_section_synopsis"'/'`"
+
+    # display the tweaked usage with header and name section at the top
+    echo ".TH `echo "$_THIS_FILENAME"|tr '[[:lower:]]' '[[:upper:]]'` \"8\" \"`date '+%B %Y'`\" \"$PACKAGE_NAME $VERSION\" \"`_t 'System Administration Utilities'`\""
+    echo "`_t 'NAME'|texinfo_section`"
     echo "$_usage"
     exit 0
 fi
