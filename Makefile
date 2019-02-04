@@ -5,38 +5,38 @@
 #
 
 # source
-SRC_DIR        = .
-SRC_FILE       = $(SRC_DIR)/cryptkey-from-usb-mtp.sh
+SRC_DIR        ?= .
+SRC_FILE       := $(SRC_DIR)/cryptkey-from-usb-mtp.sh
 
 # destination
-DEST_DIR_BASE  = usr/share
+DEST_DIR_BASE  := usr/share
 
 # package infos
-PACKAGE_NAME   = $(basename $(notdir $(SRC_FILE)))
-PACKAGE_VERS   = 0.0.1
+PACKAGE_NAME   := $(basename $(notdir $(SRC_FILE)))
+PACKAGE_VERS   := 0.0.1
 
 # locale specific
-MAIL_BUGS_TO   = mica.devel@gmail.com
-TEXTDOMAIN     = messages
-SRC_LOCALEDIR  = $(SRC_DIR)/locale
-POT_FILE       = $(SRC_DIR)/$(TEXTDOMAIN).pot
+MAIL_BUGS_TO   := mica.devel@gmail.com
+TEXTDOMAIN     := messages
+SRC_LOCALEDIR  := $(SRC_DIR)/locale
+POT_FILE       := $(SRC_DIR)/$(TEXTDOMAIN).pot
 
 # man specific
-SRC_MANDIR     = $(SRC_DIR)/man
-MAN_SECTION    = 8
-MAN_FILENAME   = $(PACKAGE_NAME)
+SRC_MANDIR     := $(SRC_DIR)/man
+MAN_SECTION    := 8
+MAN_FILENAME   := $(PACKAGE_NAME)
 
 # charset and languages
-CHARSET        = UTF-8
-LANGS          = fr
-LANGS_PLUS_EN  = en $(LANGS)
+CHARSET        := UTF-8
+LANGS          := fr
+LANGS_PLUS_EN  := en $(LANGS)
 
 # binaries
-XGETTEXT       = xgettext
-MSGFMT         = msgfmt
-MSGINIT        = msginit
-MSGMERGE       = msgmerge
-GZIP           = gzip
+XGETTEXT       := xgettext
+MSGFMT         := msgfmt
+MSGINIT        := msginit
+MSGMERGE       := msgmerge
+GZIP           := gzip
 
 # files
 LOCALE_DIRS    = $(LANGS:%=$(SRC_LOCALEDIR)/%/LC_MESSAGES)
@@ -44,15 +44,16 @@ PO             = $(addsuffix /$(TEXTDOMAIN).po,$(LOCALE_DIRS))
 MO             = $(addsuffix /$(TEXTDOMAIN).mo,$(LOCALE_DIRS))
 MAN_DIRS       = $(LANGS_PLUS_EN:%=$(SRC_MANDIR)/%/man$(MAN_SECTION))
 MANS           = $(addsuffix /$(MAN_FILENAME).$(MAN_SECTION).gz,$(MAN_DIRS))
+DIRS           = $(LOCALE_DIRS) $(MAN_DIRS)
 
 # msginit and msgmerge use the WIDTH to break lines
-WIDTH          = 80
+WIDTH          := 80
 
-# FIXME: what for? (newbee copy/paste)
+# Use theses suffixes in rules
 .SUFFIXES: .po .mo .pot .gz
 
-# Do not delete those files even if they are intermediaries
-.PRECIOUS: %.po %.mo %.pot %.gz
+# Do not delete those files even if they are intermediaries to other targets
+.PRECIOUS: %.mo
 
 # special case for english manual that do not depends on any translation
 $(SRC_MANDIR)/en/man$(MAN_SECTION)/$(MAN_FILENAME).$(MAN_SECTION).gz: $(SRC_FILE)
@@ -88,20 +89,8 @@ $(SRC_MANDIR)/%/man$(MAN_SECTION)/$(MAN_FILENAME).$(MAN_SECTION).gz: $(SRC_LOCAL
 	else \
 		echo "## Updating catalogue '$@' from '$(POT_FILE)' [$${_lang}]"; \
 		$(MSGMERGE) --quiet --lang=$$_lang --update "$@" "$<"; \
+		touch "$@"; \
 	fi
-
-# to build everything, create directories then 
-# all the man files (they depends on all the rest)
-all: dirs $(MANS)
-
-# create all required directories
-dirs:
-	@for d in $(LOCALE_DIRS) $(MAN_DIRS); do \
-		if [ ! -d "$$d" ]; then \
-			echo "## Creating directory '$$d'"; \
-			mkdir -p "$$d"; \
-		fi; \
-	done;
 
 # main translation catalogue depends on the source file
 $(POT_FILE): $(SRC_FILE)
@@ -112,6 +101,15 @@ $(POT_FILE): $(SRC_FILE)
 				  --package-name="$(PACKAGE_NAME)" --package-version="$(PACKAGE_VERS)" \
 				  --msgid-bugs-address="$(MAIL_BUGS_TO)" \
 				  --output "$@" "$<"
+
+# create all required directories
+$(DIRS):
+	@echo "## Creating directory '$@'"
+	@mkdir -p "$@"
+
+# to build everything, create directories then 
+# all the man files (they depends on all the rest)
+all: $(DIRS) $(MANS)
 
 # install all files to their proper location
 install: all
@@ -128,6 +126,6 @@ clean:
 	@$(RM) $(POT_FILE) $(MO) $(addsuffix ~,$(PO)) $(MANS) *~
 
 # catch-all
-.PHONY: all
+.PHONY: all clean install
 
 # vim:set ts=4 sw=4
