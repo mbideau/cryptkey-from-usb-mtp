@@ -466,7 +466,7 @@ partitions
 ~> echo 'DISPLAY_KEY_FILE=$TRUE' >> /etc/cryptkey-from-usb-mtp/local.conf
 ```
 
-Then update the initramfs, check it and reboot  
+Then rebuild the initramfs, check it and reboot  
 ```sh
 ~> update-initramfs -tuck all && /usr/lib/cryptkey-from-usb-mtp/tools/check_initramfs.sh && reboot
 ```
@@ -491,7 +491,12 @@ required options with '-o OPTIONS'.*
 **Note: '/root' is the default root filesystem target directory for Debian
 initramfs, but you can use any directory you want.**
 
-Mount system's partitions  
+Then you have 2 options:  
+
+1. Exit the initramfs shell, and the boot process should continue successfully  
+2. Chroot into the root filesystem
+
+Before chrooting in the filesystem, you need to mount some system's partitions  
 ```sh
 ~> mount --bind /proc    /root/proc
 ~> mount --bind /sys     /root/sys
@@ -499,14 +504,15 @@ Mount system's partitions
 ~> mount --bind /dev/pts /root/dev/pts
 ```
 
-Then you have 2 options:
-1. exit the initramfs shell, and the boot process should continue successfully  
-2. chroot into the root filesystem with `chroot /root /bin/bash`
+Then execute the chroot  
+```sh
+~> chroot /root /bin/bash
+```
 
 Once logged in (or into) the root filesystem, do your modifications, then
-update the initramfs, check it and reboot  
+rebuild the initramfs, check it and reboot  
 ```sh
-~> update-initramfs -tuck all && cryptkey-from-usb-mtp --check-initramfs && reboot
+~> update-initramfs -tuck all && /usr/lib/cryptkey-from-usb-mtp/tools/check_initramfs.sh && reboot
 ```
 
 ## Contributing
