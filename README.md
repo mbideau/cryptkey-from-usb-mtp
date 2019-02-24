@@ -535,14 +535,38 @@ Then run `make all` to generate an empty locale catalogue `locales/<locale>.po` 
 
 Follow the [Fixing/Updating a translation](#Fixing/Updating a translation) process then.
 
-### TODO
+### Creating a Debian package
 
+- [ ] create a Debian [guest account](https://signup.salsa.debian.org/register/guest/) to see if we can have a repository
+- [ ] develop the script to build the Debian package (using debmake and debuild), use a branch if no Debian repository is available
+- [ ] find a Debian mentor to: include the project into Debian CI, have a peer review, and maybe a maintainer
+
+### Supporting other Linux distributions
+
+- [ ] Arch
+- [ ] Redhat / CentOS / Fedora
+- [ ] Gentoo
+- [X] Debian/Ubuntu
+
+### Develoments
+
+- [ ] make it pass `shellcheck`
+- [ ] build a test suite (maybe in Python)
+- [ ] add motd/smartphone pluged in picture
+- [ ] add a GUI
+- [ ] re-implement it in C or other compiled language
+- [ ] add colors support
+- [ ] remove the need to define a filter strategy (use both files, with whitelist precedence)
+- [ ] replace whitelist/blacklist by allow/deny
+- [ ] remove the use of urlenc when key file path is defined in mapping
 - [X] add translation support (french locale added)
-- [ ] build a test suite (using virtualisation to do many runs and check boot
-success)
-- [ ] contact Debian cryptsetup team to ask to add the script to
-[their repo](https://salsa.debian.org/cryptsetup-team/cryptsetup/tree/master/debian/scripts)
-- [ ] contact other distro (Arch) to ask for integration (Dracut maybe)
+
+### Communication
+
+- [ ] add a tips to a tutorial for moving /boot to an encrypted USB key
+- [ ] explain why not patching the grub2 boot stage 1.5 instead (with *GRUB_ENABLE_CRYPTODISK*)
+- [ ] reference [Evil Abigail](https://github.com/GDSSecurity/EvilAbigail) blackhat script to still the passphrase with an unencrypted /boot
+- [ ] explain why not just a script to mount USB MTP (without key file support)
 - [ ] start a communication campaign (if the feedbacks are positives enough)
 
 
