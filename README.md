@@ -279,7 +279,7 @@ Great improvment! :tada: :thumbsup:
 
 **Say thank you** :heartbeat: :blush:  
 :star: star the repo on Github  
-:love_letter: email me  
+:love_letter: email [me](mailto:mica.devel@gmail.com)  
 :loudspeaker: write about it on your blog/social media
 
 **Contribute back** by:
@@ -288,7 +288,7 @@ Great improvment! :tada: :thumbsup:
 * adapting the script to other Linux flavors
 * translating its messages to other langages
 * helping to include it into distro packages
-* see the [TODO list](#TODO) (below)
+* see the [Contributing](#Contributing) section below
 
 ## Tests
 
@@ -565,7 +565,7 @@ Follow the [Fixing/Updating a translation](#Fixing/Updating a translation) proce
 
 - [ ] add a tips to a tutorial for moving /boot to an encrypted USB key
 - [ ] explain why not patching the grub2 boot stage 1.5 instead (with *GRUB_ENABLE_CRYPTODISK*)
-- [ ] reference [Evil Abigail](https://github.com/GDSSecurity/EvilAbigail) blackhat script to still the passphrase with an unencrypted /boot
+- [ ] reference [Evil Abigail](https://github.com/GDSSecurity/EvilAbigail) blackhat script to steal the passphrase with an unencrypted /boot
 - [ ] explain why not just a script to mount USB MTP (without key file support)
 - [ ] start a communication campaign (if the feedbacks are positives enough)
 
