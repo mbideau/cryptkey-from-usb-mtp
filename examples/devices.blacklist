@@ -1,0 +1,11 @@
+# vim: set ft=conf ts=4 sw=4 expandtab
+
+# List of USB MTP devices that are denied to be mounted at boot
+# to search for a key file to decrypt DM target (in /etc/crypttab).
+#
+# This file (blacklist) has NO precedence over the whitelist filter.
+# If empty, it has no effect on filtering because it is the same as
+# allowing all devices (if no whitelist is used).
+#
+# Vendor ID | Product ID | Description (Vendor Name, Product Name)
+

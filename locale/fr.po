@@ -1,0 +1,690 @@
+# French translations for cryptkey-from-usb-mtp package
+# Traductions françaises du paquet cryptkey-from-usb-mtp.
+# This file is put in the public domain.
+# Automatically generated, 2019.
+#
+#
+# Copyright (C) 2019 Michael Bideau [France]
+#
+# This file is part of cryptkey-from-usb-mtp.
+#
+# cryptkey-from-usb-mtp is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# cryptkey-from-usb-mtp is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with cryptkey-from-usb-mtp.  If not, see <https://www.gnu.org/licenses/>.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: cryptkey-from-usb-mtp 0.0.1\n"
+"Report-Msgid-Bugs-To: mica.devel@gmail.com\n"
+"POT-Creation-Date: 2019-02-24 14:15+0100\n"
+"PO-Revision-Date: 2019-02-02 17:09+0100\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: cryptkey-from-usb-mtp.sh:304
+msgid "%s failed to mount device '%s'"
+msgstr "%s n'a pas réussi à monter le périphérique '%s'"
+
+#: cryptkey-from-usb-mtp.sh:467 cryptkey-from-usb-mtp.sh:500
+msgid "'%s' binary not found"
+msgstr "binaire '%s' non trouvé"
+
+#: cryptkey-from-usb-mtp.sh:151
+msgid "(informative only) The disk source to unlock."
+msgstr "(informationnel seulement) Le disque source a dévérouiller."
+
+#: cryptkey-from-usb-mtp.sh:137
+msgid ""
+"A path to a key file.\\n\n"
+"The env var is optional if the argument '%s' is specified, required "
+"otherwise.\\n\n"
+"Same process apply as for the '%s' argument, i.e.: removing quotes, URL "
+"decoding and decrypting."
+msgstr ""
+"Un chemin vers un fichier 'clé'.\\n\n"
+"La variable d'environnement est optionnelle si l'argument '%s' est spécifié, "
+"sinon il est requis.\\n\n"
+"Le même processus s'applique que pour l'argument '%s', càd: suppression des "
+"guillements, décodage de l'URL, et déchiffrement."
+
+#: cryptkey-from-usb-mtp.sh:106 tools/check_initramfs.sh:79
+#: tools/create_filter.sh:74 tools/initramfs-hook.sh:77 tools/mapping.sh:75
+msgid "ARGUMENTS"
+msgstr "ARGUMENTS"
+
+#: include/usage.inc.sh:55
+msgid "AUTHORS"
+msgstr "AUTEURS"
+
+#: tools/mapping.sh:216
+msgid "Aborting."
+msgstr "Abandon."
+
+#: tools/mapping.sh:122
+msgid ""
+"Add a mapping entry to a specific mapping file.\\n\n"
+"      Uses an encrypted key. So when before using the key to decrypt\\n\n"
+"      the device, it will first ask a password to decrypt the keyfile."
+msgstr ""
+"Ajout une entrée de correspondance au fichier de correspondance spécifique."
+"\\n\n"
+"      Utilise une clé chiffrée. Ainsi, avant d'utiliser la clé pour "
+"déchiffrer\\n\n"
+"      le périphérique, il sera d'abord demander un mot de passe pour "
+"déchiffrer le fichier clé."
+
+#: tools/mapping.sh:115
+msgid ""
+"Add a mapping entry to default mapping file.\\n\n"
+"      It will decrypt the Device Mapper target '%s'\\n\n"
+"      with the key file searched at '%s'\\n\n"
+"      on every MTP devices that can be mounted (not filtered out)."
+msgstr ""
+"Ajoute une entrée de correspondance au fichier de correspondances par défaut."
+"\\n\n"
+"      Déchiffre le \"Device Mapper\" cible '%s'\\n\n"
+"      avec le fichier clé cherché à '%s'\\n\n"
+"      dans chaque périphérique MTP qui peuvent être montés (pas filtrés)."
+
+#: tools/mapping.sh:88
+msgid ""
+"Add a mapping entry to the mapping file (created it if required).\\n\n"
+"\tA mapping entry is an association between a DM target and a key path."
+msgstr ""
+"Ajout une entrée de correspondance au fichier de correspondances (créé si "
+"besoin).\\n\n"
+"\tUne entrée de correspondance est une association entre un DM cible et un "
+"chemin de clé."
+
+#: tools/mapping.sh:90
+msgid "Arguments are"
+msgstr "Les arguments sont"
+
+#: tools/check_initramfs.sh:153 tools/check_initramfs.sh:167
+#: tools/check_initramfs.sh:214
+msgid "Binary '%s' (%s) not found in '%s'"
+msgstr "Binaire '%s' (%s) non trouvé dans '%s'"
+
+#: include/usage.inc.sh:63
+msgid "COPYRIGHT"
+msgstr "COPYRIGHT"
+
+#: tools/mapping.sh:67
+msgid "Check a mapping file or add a mapping entry."
+msgstr ""
+"Vérifie la syntaxe du fichier de correspondances ou ajout une entrée de "
+"correspondance."
+
+#: tools/mapping.sh:84
+msgid ""
+"Check a mapping file.\\n\n"
+"        It is the default behaviour when '%s' is not specified."
+msgstr ""
+"Vérifie un fichier de correspondances.\\n\n"
+"        C'est le comportement par défaut lorsque '%s' est spécifié."
+
+#: tools/check_initramfs.sh:103
+msgid "Check a specific initramfs"
+msgstr "Vérifie un fichier initramfs spécifique"
+
+#: tools/mapping.sh:112
+msgid "Check a specific mapping file"
+msgstr "Vérifie un fichier de correspondances spécifique"
+
+#: tools/check_initramfs.sh:100
+msgid "Check current kernel initramfs"
+msgstr "Vérifie le fichier initramfs du \"kernel\" courant"
+
+#: tools/mapping.sh:109
+msgid "Check default mapping file"
+msgstr "Vérifie le fichier de correspondances par défaut"
+
+#: tools/check_initramfs.sh:72
+msgid "Check that every requirements had been copied inside the initramfs"
+msgstr "Vérifie que tous les fichiers requis ont été copié dans l'initramfs"
+
+#: tools/check_initramfs.sh:188 tools/check_initramfs.sh:194
+msgid "Configuration file '%s' not found in '%s'"
+msgstr "Fichier de configuration '%s' non trouvé dans '%s'"
+
+#: tools/initramfs-hook.sh:69
+msgid "Copy '%s' required files inside the initramfs"
+msgstr "Copie tous les fichiers requis par '%s' dans l'initramfs"
+
+#: tools/create_filter.sh:67
+msgid ""
+"Create a USB MTP device's filter list based on currently available devices."
+msgstr ""
+"Créer une liste de filtrage de périphérique USB MTP basée sur ceux "
+"actuellement disponibles."
+
+#: tools/create_filter.sh:99
+msgid "Create a specific filter file"
+msgstr "Créer une règle spécifique de filtrage"
+
+#: tools/create_filter.sh:96
+msgid "Create default filter file"
+msgstr "Créer le fichier de filtrage par défaut"
+
+#: tools/check_initramfs.sh:235
+msgid "Cryptsetup's locale file '%s' not found in '%s'"
+msgstr "Fichier de langue pour cryptsetup '%s' non trouvé dans '%s'"
+
+#: tools/mapping.sh:207
+msgid "DM target '%s' already have a mapping"
+msgstr "Le DM cible '%s' a déjà une correspondance"
+
+#: tools/mapping.sh:154 tools/mapping.sh:302
+msgid "DM target '%s' do not match any DM target in '%s'"
+msgstr "Le DM cible '%s' ne correspond à aucun DM cible dans '%s'"
+
+#: tools/mapping.sh:151
+msgid "DM target is empty for mapping line '%s'"
+msgstr "Le DM cible est vide pour la ligne de correspondance '%s'"
+
+#: tools/mapping.sh:91
+msgid "DM target name"
+msgstr "Nom du DM cible"
+
+#: tools/mapping.sh:72 tools/mapping.sh:87 tools/mapping.sh:91
+msgid "DM_TARGET"
+msgstr "DM_CIBLE"
+
+#: cryptkey-from-usb-mtp.sh:166
+msgid "Default path to the default configuration file."
+msgstr "Chemin par défaut du fichier de configuration par défaut."
+
+#: cryptkey-from-usb-mtp.sh:181
+msgid ""
+"Default path to the directory containg tool scripts to help managing "
+"configuration."
+msgstr ""
+"Chemin par défaut du dossier contenant les utilitaires aidantà gérer la "
+"configuration."
+
+#: cryptkey-from-usb-mtp.sh:172
+msgid ""
+"Default path to the file containing mapping between crypttab DM target and "
+"key file."
+msgstr ""
+"Chemin par défault du fichier contenant l'association entre les DM cibles et "
+"les fichiers 'clés'."
+
+#: cryptkey-from-usb-mtp.sh:175
+msgid "Default path to the list of allowed USB MTP devices."
+msgstr "Chemin par défaut de la liste des périphériques USB MTP autorisés."
+
+#: cryptkey-from-usb-mtp.sh:178
+msgid "Default path to the list of denied USB MTP devices."
+msgstr "Chemin par défaut de la liste des périphériques USB MTP interdit."
+
+#: cryptkey-from-usb-mtp.sh:169
+msgid ""
+"Default path to the local configuration file (i.e.: overrides default.conf)."
+msgstr ""
+"Chemin par défaut du fichier local de configuration (càd: écrase default."
+"conf)."
+
+#: cryptkey-from-usb-mtp.sh:163
+msgid "Default path to this shell script (to be included in the initramfs)."
+msgstr "Chemin par défaut de ce script shell (à inclure dans l'initramfs)"
+
+#: tools/check_initramfs.sh:160
+msgid "Directory '%s' (%s) not found in '%s'"
+msgstr "Dossier '%s' (%s) non trouvé dans '%s'"
+
+#: cryptkey-from-usb-mtp.sh:131
+msgid "Display the version of this script."
+msgstr "Affiche la version de ce script."
+
+#: cryptkey-from-usb-mtp.sh:128 tools/check_initramfs.sh:89
+#: tools/create_filter.sh:85 tools/initramfs-hook.sh:85 tools/mapping.sh:98
+msgid "Display this help."
+msgstr "Afficher cette aide"
+
+#: cryptkey-from-usb-mtp.sh:133 tools/check_initramfs.sh:91
+#: tools/help2texi.sh:270 tools/create_filter.sh:87 tools/initramfs-hook.sh:87
+#: tools/mapping.sh:100
+msgid "ENVIRONMENT"
+msgstr "ENVIRONNEMENT"
+
+#: include/utils.inc.sh:106
+msgid "ERROR"
+msgstr "ERREUR"
+
+#: cryptkey-from-usb-mtp.sh:186 tools/check_initramfs.sh:98
+#: tools/create_filter.sh:94 tools/mapping.sh:107
+msgid "EXAMPLES"
+msgstr "EXEMPLES"
+
+#: include/usage.inc.sh:33
+msgid "Enable the debug mode (verbose output to '%s')."
+msgstr "Active le mode 'debug' (affichage verbeux sur '%s')."
+
+#: cryptkey-from-usb-mtp.sh:256
+msgid "Excluding device '%s' (%s)"
+msgstr "Exclu le périphérique '%s' (%s)"
+
+#: cryptkey-from-usb-mtp.sh:158 tools/help2texi.sh:268
+msgid "FILES"
+msgstr "FICHIERS"
+
+#: tools/create_filter.sh:64
+msgid "FILTER_FILE"
+msgstr "FICHIER_FILTRE"
+
+#: tools/create_filter.sh:156
+msgid "Failed to add device list ot filter file '%s'"
+msgstr "Échec de la création du fichier de filtre '%s'"
+
+#: cryptkey-from-usb-mtp.sh:672 cryptkey-from-usb-mtp.sh:698
+msgid "Failed to add key '%s' to kernel cache"
+msgstr "Échec de l'ajout de la clé '%s' au cache du 'kernel'"
+
+#: cryptkey-from-usb-mtp.sh:515
+msgid "Failed to create file '%s'"
+msgstr "Échec de la création du fichier '%s'"
+
+#: tools/create_filter.sh:147
+msgid "Failed to create filter file '%s'"
+msgstr "Échec de la création du fichier de filtre '%s'"
+
+#: cryptkey-from-usb-mtp.sh:644
+msgid "Failed to decrypt key '%s' with cryptsetup"
+msgstr "Échec du déchiffrage de la clé '%s' avec 'cryptsetup'"
+
+#: cryptkey-from-usb-mtp.sh:682
+msgid "Failed to get file size of '%s'"
+msgstr "Échec de la récupération de la taille du fichier '%s'"
+
+#: cryptkey-from-usb-mtp.sh:691
+msgid "Failed to set timeout on cached key '%s'"
+msgstr ""
+"Échec de la définition d'une limite de temps (timeout) sur la clé mise en "
+"cache '%s'"
+
+#: cryptkey-from-usb-mtp.sh:608
+msgid "Filesystem of device '%s' is not accessible"
+msgstr "Le système de fichier du périphérique '%s' n'est pas accessible"
+
+#: tools/create_filter.sh:138
+msgid "Filter file '%s' already exists"
+msgstr "Le fichier de filtre '%s' existe déjà"
+
+#: include/usage.inc.sh:36
+msgid "Force the path to a configuration directory."
+msgstr "Force le chemin du dossier des configurations."
+
+#: include/usage.inc.sh:39
+msgid "Force the path to an include directory."
+msgstr "Force le chemin du dossier des inclusions."
+
+#: include/usage.inc.sh:71
+msgid "Home page"
+msgstr "Page d'accueil"
+
+#: tools/check_initramfs.sh:76 tools/check_initramfs.sh:81
+msgid "INITRAMFS_FILE"
+msgstr "FICHIER_INITRAMFS"
+
+#: tools/mapping.sh:94
+msgid ""
+"If the key path contains non-alphanum char it will be automatically\\n\n"
+"\tencoded with the url format."
+msgstr ""
+"Si le chemin du fichier clé contient des caractères non-alphnumériques il "
+"sera automatiquement\\n\n"
+"\tencodé au format url."
+
+#: cryptkey-from-usb-mtp.sh:609
+msgid "Ignoring device '%s' (filesystem unaccessible)"
+msgstr "Ignore le périphérique '%s' (système de fichier inaccessible)"
+
+#: tools/check_initramfs.sh:268
+msgid "Initramfs file '%s' doesn't exist or isn't readable"
+msgstr "Le fichier d'initramfs '%s' n'existe pas ou n'est pas lisible"
+
+#: cryptkey-from-usb-mtp.sh:275
+msgid "Invalid MTP device filter strategy '%s' (must be: %s)"
+msgstr "Stratégie de filtrage de périphérique '%s' invalide (doit être: %s)"
+
+#: tools/mapping.sh:297
+msgid "Invalid argument '%s' for option '%s'"
+msgstr "Argument '%s' invalide pour l'option '%s'"
+
+#: tools/mapping.sh:161
+msgid "Invalid key options '%s' for mapping line '%s'"
+msgstr "Option de clé '%s' invalide pour la ligne de correspondance '%s'"
+
+#: tools/mapping.sh:144
+msgid "Invalid line '%s'"
+msgstr "Ligne invalide '%s'"
+
+#: tools/mapping.sh:317
+msgid "Invalid options"
+msgstr "Options invalides"
+
+#: cryptkey-from-usb-mtp.sh:110
+msgid ""
+"Is the path to a key file.\\n\n"
+"The argument is optional if the env var %s is specified, required otherwise."
+"\\n\n"
+"It is relative to the device mount point/dir.\\n\n"
+"Quotes ['\"] will be removed at the begining and end.\\n\n"
+"If it starts with '%s' it will be URL decoded.\\n\n"
+"If it starts with '%s' it will be decrypted with '%s' on the file.\\n\n"
+"'%s' and '%s' can be combined in any order, i.e.: '%s' or '%s'."
+msgstr ""
+"Est le chemin vers un fichier clé.\\n\n"
+"L'argument est optionnel si la variable d'environnement %s est spécifiée, "
+"sinon il est requis.\\n\n"
+"Il est relatif au point de montage du périphérique.\\n\n"
+"Les guillements ['\"] seront supprimés au début et à la fin.\\n\n"
+"S'il débute par '%s' il sera décodé depuis un format URL.\\n\n"
+"S'il débute par '%s' le fichier sera déchiffré avec '%s'.\\n\n"
+"'%s' et '%s' peuvent être combiné dans n'importe quel ordre, càd: '%s' ou "
+"'%s'."
+
+#: tools/mapping.sh:72 tools/mapping.sh:87 tools/mapping.sh:92
+msgid "KEYFILE_REL_PATH"
+msgstr "CHEMIN_REL_FICH_CLE"
+
+#: tools/check_initramfs.sh:137
+msgid "Kernel module '%s' (%s) not found in '%s'"
+msgstr "Module 'kernel' '%s' (%s) non trouvé dans '%s'"
+
+#: cryptkey-from-usb-mtp.sh:470
+msgid "Key caching is disabled"
+msgstr "La mise en cache des clé est désactivée"
+
+#: cryptkey-from-usb-mtp.sh:677
+msgid "Key content size '%s' exceeds cache max size of '%s'"
+msgstr ""
+"La taille '%s' du contenu de la clé dépasse la taille maximale du cache '%s'"
+
+#: cryptkey-from-usb-mtp.sh:646
+msgid "Key decrypted but device mapper '%s' doesn't exists! Bug?"
+msgstr "Clé déchiffrée mais le 'device mapper' '%s' n'existe pas! Bug?"
+
+#: tools/mapping.sh:157
+msgid "Key path is empty for mapping line '%s'"
+msgstr "Le chemin de la clé est vide pour la ligne de correspondance '%s'"
+
+#: tools/mapping.sh:92
+msgid "Keyfile path relative to device filesystem"
+msgstr "Chemin du fichier clé relatif au système de fichier du périphérique"
+
+#: tools/check_initramfs.sh:145
+msgid "Library '%s' (%s) not found in '%s'"
+msgstr "Librairie '%s' (%s) non trouvée dans '%s'"
+
+#: include/usage.inc.sh:92
+msgid "License %s: %s <%s>"
+msgstr "Licence %s: %s <%s>"
+
+#: tools/check_initramfs.sh:220
+msgid "Locale archive file '%s' not found in '%s'"
+msgstr "Fichier archive de langues '%s' non trouvé dans '%s'"
+
+#: tools/check_initramfs.sh:208 tools/check_initramfs.sh:227
+msgid "Locale file '%s' not found in '%s'"
+msgstr "Fichier de langue '%s' non trouvé dans '%s'"
+
+#: tools/mapping.sh:64
+msgid "MAPPING_FILE"
+msgstr "FICHIER_CORRESPONDANCES"
+
+#: cryptkey-from-usb-mtp.sh:280
+msgid "MTP device list file '%s' doesn't exist nor is readable"
+msgstr ""
+"Le fichier de la liste des périphériques MTP '%s' n'existe pas ou est "
+"illisible"
+
+#: tools/mapping.sh:274
+msgid "Mapping file '%s' doesn't exist or isn't readable"
+msgstr "Le fichier de correspondances '%s' n'existe pas ou est illisible"
+
+#: tools/help2texi.sh:302
+msgid "NAME"
+msgstr "NOM"
+
+#: cryptkey-from-usb-mtp.sh:534
+msgid "No MTP device available (after %ss timeout)"
+msgstr "Aucun périphérique MTP disponible (après %ss d'attente)"
+
+#: cryptkey-from-usb-mtp.sh:160
+msgid ""
+"Note: Paths may have changed, at installation time, by configuration or "
+"environment."
+msgstr ""
+"Note: Les chemins peuvent avoir changés, à l'installation, par configuration "
+"ou environnement."
+
+#: tools/check_initramfs.sh:250
+msgid "OK. Initramfs '%s' seems to contain every thing required."
+msgstr "OK. L'initramfs '%s' semble contenir tous les fichiers requis."
+
+#: cryptkey-from-usb-mtp.sh:125 tools/check_initramfs.sh:86
+#: tools/create_filter.sh:82 tools/initramfs-hook.sh:82 tools/mapping.sh:81
+msgid "OPTIONS"
+msgstr "OPTIONS"
+
+#: cryptkey-from-usb-mtp.sh:468 cryptkey-from-usb-mtp.sh:501
+msgid "On Debian you can install it with: > %s"
+msgstr "Sur Debian vous pouvez l'installer avec: > %s"
+
+#: tools/mapping.sh:209
+msgid "Override the mapping for DM target '%s' [Y/n] ?"
+msgstr "Remplacer la correspondance du DM cible '%s' [O/n] ?"
+
+#: cryptkey-from-usb-mtp.sh:184
+msgid "Path to initramfs hook that inject required files into initramfs."
+msgstr ""
+"Chemin du 'hook' initramfs qui injecte les fichiers requis dans l'initramfs."
+
+#: cryptkey-from-usb-mtp.sh:362
+msgid "Please manually enter the passphrase to unlock disk '%s'"
+msgstr ""
+"S'il vous plait, saisissez manuellement la phrase secrète pour dévérouiller "
+"le disque '%s'"
+
+#: cryptkey-from-usb-mtp.sh:580
+msgid "Please unlock the device '%s', then hit enter ... ('s' to skip)"
+msgstr ""
+"S'il vous plait, dévérouillez le périphérique '%s', puis appuyez sur "
+"'entrée' ... ('s' pour passer)"
+
+#: cryptkey-from-usb-mtp.sh:98
+msgid "Print a key to STDOUT from a key file stored on a USB MTP device."
+msgstr ""
+"Affiche une clé dans STDOUT issue d'un fichier clé stocké sur un "
+"périphérique USB MTP."
+
+#: tools/initramfs-hook.sh:80
+msgid "Print dependencies"
+msgstr "Affiche les dépendances"
+
+#: include/usage.inc.sh:59
+msgid "REPORTING BUGS"
+msgstr "SIGNALER DES BUGS"
+
+#: cryptkey-from-usb-mtp.sh:692
+msgid "Removing key '%s' from cache"
+msgstr "Suppression de la mise en cache de la clé '%s'"
+
+#: include/usage.inc.sh:61
+msgid "Report bugs to"
+msgstr "Signaler les bugs à"
+
+#: include/usage.inc.sh:69
+msgid "SEE ALSO"
+msgstr "VOIR AUSSI"
+
+#: tools/help2texi.sh:271
+msgid "SYNOPSIS"
+msgstr "RÉSUMÉ"
+
+#: tools/check_initramfs.sh:178 tools/check_initramfs.sh:182
+msgid "Shell include script '%s' not found in '%s'"
+msgstr "Script shell d'inclusion '%s' non trouvé dans '%s'"
+
+#: tools/check_initramfs.sh:172
+msgid "Shell script '%s' not found in '%s'"
+msgstr "Script shell '%s' non trouvé dans '%s'"
+
+#: cryptkey-from-usb-mtp.sh:585
+msgid "Skipping unlocking device '%s'"
+msgstr "Passe le dévérouillage du périphérique '%s'"
+
+#: cryptkey-from-usb-mtp.sh:678
+msgid "The content for key '%s' cannot be cached"
+msgstr "Le contenu de la clé '%s' ne peut pas être mis en cache"
+
+#: tools/mapping.sh:93
+msgid "The key is encrypted (and will need decryption)"
+msgstr "La clé est chiffrée (et aura besoin d'être déchiffrée)"
+
+#: tools/check_initramfs.sh:82
+msgid ""
+"The path to an initramfs file (i.e.: %s)\\n\n"
+"        Default to: '%s'"
+msgstr ""
+"Le chemin d'un fichier initramfs (càd: %s)\\n\n"
+"        Par défaut vaut: '%s'"
+
+#: tools/create_filter.sh:77
+msgid ""
+"The path to the created filter file.\\n\n"
+"        It default to the configuration value of %s which in turn depends on "
+"the value of %s.\\n\n"
+"        Currently it is: '%s'."
+msgstr ""
+"Le chemin du fichier de filtrage créé.\\n\n"
+"        Par défaut prend la valeur configurée %s qui elle-même dépend de la "
+"valeur de %s.\\n\n"
+"        Actuellement vaut: '%s'."
+
+#: tools/mapping.sh:78
+msgid ""
+"The path to the mapping file.\\n\n"
+"        It default to: '%s'."
+msgstr ""
+"Chemin du fichier de correspondances.\\n\n"
+"        Par défaut vaut: '%s'."
+
+#: cryptkey-from-usb-mtp.sh:146
+msgid ""
+"The target device mapper name (unlocked).\\n\n"
+"It is used to do the mapping with a key if none is specified in the crypttab "
+"file, else informative only."
+msgstr ""
+"Nom du 'device mapper' cible (dévérouillé).\\n\n"
+"Est utilisé pour faire la correspondance avec une clé si aucune n'est "
+"spécifiée dans le fichier 'crypttab', sinon est uniquement informatif."
+
+#: include/usage.inc.sh:99
+msgid "There is NO WARRANTY, to the extent permitted by law."
+msgstr "Il n'y AUCUNE GARANTIE, jusqu'à ce que permet la loi."
+
+#: include/usage.inc.sh:93
+msgid "This is free software: you are free to change and redistribute it."
+msgstr ""
+"Ceci est un logiciel libre: vous êtes libre de le modifier et de le "
+"redistribuer."
+
+#: tools/check_initramfs.sh:245
+msgid ""
+"To further investigate, you can use this command to list files inside "
+"initramfs:\\n> %s"
+msgstr ""
+"Pour investiguer plus, vous pouvez utiliser cette commande pour lister les "
+"fichiers dans l'initramfs:\\n> %s"
+
+#: tools/mapping.sh:292
+msgid "Too few arguments for option '%s'"
+msgstr "Trop peu d'arguments pour l'option '%s'"
+
+#: cryptkey-from-usb-mtp.sh:100 tools/check_initramfs.sh:74
+#: tools/help2texi.sh:269 tools/create_filter.sh:69 tools/initramfs-hook.sh:71
+#: tools/mapping.sh:69
+msgid "USAGE"
+msgstr "USAGE"
+
+#: cryptkey-from-usb-mtp.sh:680
+msgid "Uh, I do not understand the cause of failure (bug?), sorry"
+msgstr "Euh, je ne comprends pas la cause de l'échec (bug?), désolé"
+
+#: cryptkey-from-usb-mtp.sh:492
+msgid "Unlocking '%s' with cached key '%s' ..."
+msgstr "Dévérouille '%s' avec la clé mise en cache '%s' ..."
+
+#: cryptkey-from-usb-mtp.sh:342
+msgid "Unlocking '%s' with%s key file '%s' ..."
+msgstr "Dévérouille '%s' avec le fichier clé%s '%s' ..."
+
+#: cryptkey-from-usb-mtp.sh:344
+msgid "Unlocking '%s' with%s key file ..."
+msgstr "Dévérouille '%s' avec le fichier clé%s ..."
+
+#: include/usage.inc.sh:48
+msgid "Use this domain directory to do the translation (i.e.: %s)."
+msgstr "Utiliser ce dossier domaine pour effectuer la traduction (ex: %s)."
+
+#: include/usage.inc.sh:45
+msgid "Use this language to do the translation (i.e.: %s)."
+msgstr "Utiliser cette langue pour effectuer la traduction (ex: %s)."
+
+#: include/usage.inc.sh:42
+msgid "Use this locale to do the translation (i.e.: %s)."
+msgstr "Utiliser cette 'locale' pour effectuer la traduction (ex: %s)."
+
+#: cryptkey-from-usb-mtp.sh:188
+msgid "Use this script as a standalone shell command to unlock a disk"
+msgstr ""
+"Utilise ce script en tant que commande shell 'standalone' pour dévérouiller "
+"un disque"
+
+#: tools/mapping.sh:307
+msgid "Value '%s' cannot contain mapping file separator '%s'"
+msgstr ""
+"La value '%s' ne peut contenir le charactère '%s' de séparation du fichier "
+"de correspondances"
+
+#: include/utils.inc.sh:101
+msgid "WARNING"
+msgstr "AVERTISSEMENT"
+
+#: cryptkey-from-usb-mtp.sh:523
+msgid "Waiting for an MTP device to become available (max %ss) ..."
+msgstr "Attente qu'un périphérique MTP devienne disponible (max %ss) ..."
+
+#: include/usage.inc.sh:57
+msgid "Written by"
+msgstr "Écrit par"
+
+#: cryptkey-from-usb-mtp.sh:341
+msgid "backup"
+msgstr "de secours"
+
+#: cryptkey-from-usb-mtp.sh:93 cryptkey-from-usb-mtp.sh:108
+msgid "keyfile"
+msgstr "fichier_cle"
+
+#: cryptkey-from-usb-mtp.sh:108 tools/check_initramfs.sh:81
+#: tools/create_filter.sh:76 tools/mapping.sh:77 tools/mapping.sh:93
+msgid "optional"
+msgstr "optionnel"
