@@ -102,15 +102,15 @@ debian> apt install gettext
 ```
 
 ### cryptsetup
-You should already have `cryptsetup` installed.
-Else, on Debian/Ubuntu you can install them with:  
+You should already have **cryptsetup** installed.  
+Else, on Debian/Ubuntu you can install it with:  
 ```sh
 debian> apt install cryptsetup
 ```
 
 ### shellcheck
-If you want to check for shell errors and POSIX compatibility, you will need `shellcheck` binary.
-On Debian/Ubuntu you can install them with:  
+If you want to check for shell errors and POSIX compatibility, you will need **shellcheck** binary.  
+On Debian/Ubuntu you can install it with:  
 ```sh
 debian> apt install shellcheck
 ```
