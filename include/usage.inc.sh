@@ -30,45 +30,45 @@ usage_environment()
     fi
     cat <<ENDCAT
     DEBUG    
-$_left_margin`__tt "Enable the debug mode (verbose output to '%s')." 'STDERR'`
+${_left_margin}$(__tt "Enable the debug mode (verbose output to '%s')." 'STDERR')
 
     CONFIG_DIR    
-$_left_margin`__tt "Force the path to a configuration directory."`
+${_left_margin}$(__tt "Force the path to a configuration directory.")
 
     INCLUDE_DIR    
-$_left_margin`__tt "Force the path to an include directory."`
+${_left_margin}$(__tt "Force the path to an include directory.")
 
     LANG    
-$_left_margin`__tt "Use this locale to do the translation (i.e.: %s)." 'fr_FR.UTF-8'`
+${_left_margin}$(__tt "Use this locale to do the translation (i.e.: %s)." 'fr_FR.UTF-8')
 
     LANGUAGE    
-$_left_margin`__tt "Use this language to do the translation (i.e.: %s)." 'fr'`
+${_left_margin}$(__tt "Use this language to do the translation (i.e.: %s)." 'fr')
 
     TEXTDOMAINDIR    
-$_left_margin`__tt "Use this domain directory to do the translation (i.e.: %s)." '/usr/share/locale'`
+${_left_margin}$(__tt "Use this domain directory to do the translation (i.e.: %s)." '/usr/share/locale')
 ENDCAT
 }
 
 # display the end of the usage command
 usage_bottom(){
     cat <<ENDCAT
-`__tt 'AUTHORS'`
+$(__tt 'AUTHORS')
  
-    `__tt 'Written by'`: $AUTHOR
+    $(__tt 'Written by'): $AUTHOR
  
-`__tt 'REPORTING BUGS'`
+$(__tt 'REPORTING BUGS')
  
-    `__tt 'Report bugs to'`: <$MAILING_ADDRESS>
+    $(__tt 'Report bugs to'): <$MAILING_ADDRESS>
  
-`__tt 'COPYRIGHT'`
+$(__tt 'COPYRIGHT')
  
-    `copyright`
-    `license|sed "2,$ s/^/    /"`
-    `warranty`
+    $(copyright)
+    $(license|sed "2,$ s/^/    /")
+    $(warranty)
  
-`__tt 'SEE ALSO'`
+$(__tt 'SEE ALSO')
  
-    `__tt 'Home page'`: <$HOME_PAGE>
+    $(__tt 'Home page'): <$HOME_PAGE>
  
 ENDCAT
 }
@@ -82,20 +82,20 @@ version()
 # display copyright
 copyright()
 {
-    _current_year="`date '+%Y'`"
-    echo "Copyright (C) 2019`if [ "$_current_year" != '2019' ]; then printf '-'; date -R; fi` $AUTHOR."
+    _current_year="$(date '+%Y')"
+    echo "Copyright (C) 2019$(if [ "$_current_year" != '2019' ]; then printf '-'; date -R; fi) $AUTHOR."
 }
 
 # diplay license
 license()
 {
-    echo "`__tt "License %s: %s <%s>" 'GPLv3+' 'GNU GPL version 3 or later' 'https://gnu.org/licenses/gpl.html'`"
-    echo "`__tt "This is free software: you are free to change and redistribute it."`"
+    __tt "License %s: %s <%s>" 'GPLv3+' 'GNU GPL version 3 or later' 'https://gnu.org/licenses/gpl.html'
+    __tt "This is free software: you are free to change and redistribute it."
 }
 
 # diplay warranty
 warranty()
 {
-    echo "`__tt "There is NO WARRANTY, to the extent permitted by law."`"
+    __tt "There is NO WARRANTY, to the extent permitted by law."
 }
 

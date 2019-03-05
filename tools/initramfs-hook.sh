@@ -57,7 +57,7 @@ UTILS_INC_FILE="$INCLUDE_DIR"/utils.inc.sh
 . "$UTILS_INC_FILE"
 
 # this script filename
-_THIS_FILENAME="`basename "$0"`"
+_THIS_FILENAME="$(basename "$0")"
 
 
 # usage
@@ -66,25 +66,25 @@ usage()
     USAGE_LEFT_MARGIN='        '
     cat <<ENDCAT
 
-$_THIS_FILENAME - `__tt "Copy '%s' required files inside the initramfs" "$PACKAGE_NAME"`
+$_THIS_FILENAME - $(__tt "Copy '%s' required files inside the initramfs" "$PACKAGE_NAME")
 
-`__tt 'USAGE'`
+$(__tt 'USAGE')
 
     $_THIS_FILENAME
     $_THIS_FILENAME prereqs
     $_THIS_FILENAME -h|--help
 
-`__tt 'ARGUMENTS'`
+$(__tt 'ARGUMENTS')
 
     prereqs    
-        `__tt "Print dependencies"`
+        $(__tt "Print dependencies")
 
-`__tt 'OPTIONS'`
+$(__tt 'OPTIONS')
  
     -h|--help    
-        `__tt 'Display this help.'`
+        $(__tt 'Display this help.')
  
-`__tt 'ENVIRONMENT'`
+$(__tt 'ENVIRONMENT')
  
 ENDCAT
     usage_environment
@@ -96,7 +96,7 @@ ENDCAT
 
 
 # display help
-if [ "$1" = '-h' -o "$1" = '--help' ]; then
+if [ "$1" = '-h' ] || [ "$1" = '--help' ]; then
     . "$USAGE_INC_FILE"
     usage
     usage_bottom
@@ -117,7 +117,7 @@ set +e
 
 
 # initramfs hook help functions
-. /usr/share/initramfs-tools/hook-functions
+. "$INITRAMFS_HOOK_FUNC_FILE"
 
 
 # copy the script
@@ -144,8 +144,8 @@ fi
 
 # copy filter files (optional)
 for _strategy in whitelist blacklist; do
-    if [ -r "`echo "$MTP_FILTER_FILE"|sed "s/\..*/.$_strategy/"`" ]; then
-        copy_file 'file' "`echo "$MTP_FILTER_FILE"|sed "s/\..*/.$_strategy/"`"; [ $? -le 1 ] || exit 2
+    if [ -r "$(echo "$MTP_FILTER_FILE"|sed "s/\\..*/.$_strategy/")" ]; then
+        copy_file 'file' "$(echo "$MTP_FILTER_FILE"|sed "s/\\..*/.$_strategy/")"; [ $? -le 1 ] || exit 2
     fi
 done
 
@@ -153,9 +153,9 @@ done
 if [ "$INITRAMFS_DISABLE_LOCALE" != "$TRUE" ]; then
 
     # current locale
-    _locale=*
+    _locale='*'
     if [ "$LANG" !=  '' ]; then
-        _locale="`echo "$LANG"|cut -c -2|tr '[:upper:]' '[:lower:]'`"
+        _locale="$(echo "$LANG"|cut -c -2|tr '[:upper:]' '[:lower:]')"
     fi
 
     # copy the locales
@@ -164,7 +164,7 @@ if [ "$INITRAMFS_DISABLE_LOCALE" != "$TRUE" ]; then
     done
 
     # copy gettext
-    if [ "$GETTEXT" != '' -o "$GETTEXT" != "`which echo`" ]; then
+    if [ "$GETTEXT" != '' ] || [ "$GETTEXT" != "$(which echo)" ]; then
         copy_file 'file' "$GETTEXT" # ignore failure here (if gettext binary is missing it will be replaced by echo)
     fi
 
@@ -172,7 +172,7 @@ if [ "$INITRAMFS_DISABLE_LOCALE" != "$TRUE" ]; then
     for _var in LANG LANGUAGE; do
         eval _force_it=\$INITRAMFS_FORCE_$_var
         eval _current_value=\$$_var
-        if [ "$_force_it" = "$TRUE" -a "$_current_value" != '' ]; then
+        if [ "$_force_it" = "$TRUE" ] && [ "$_current_value" != '' ]; then
             sed -e "s/^[[:blank:]]*#\\?[[:blank:]]*FORCE_$_var=.*/FORCE_$_var=$_current_value/g" \
                 -i "$DESTDIR"/"$DEFAULT_CONFIG_FILE"
         fi
@@ -183,18 +183,18 @@ if [ "$INITRAMFS_DISABLE_LOCALE" != "$TRUE" ]; then
 
         # be careful: this file can be quite large if it store more than the current locale
         if which localedef >/dev/null 2>&1; then
-            _LANG_normalized="`echo "$LANG"|sed -e 's/UTF-\?\(8\|16\)/utf\1/g' -e 's/UTF/utf/g'`"
-            if [ "`localedef --list-archive`" != "$_LANG_normalized" ]; then
+            _LANG_normalized="$(echo "$LANG"|sed -e 's/UTF-\?\(8\|16\)/utf\1/g' -e 's/UTF/utf/g')"
+            if [ "$(localedef --list-archive)" != "$_LANG_normalized" ]; then
                 echo "WARNING: the locale-archive contains more than the current locale '$_LANG_normalized' (see 'localedef --list-archive')"
-                _locale_archive_size="`du -sh /usr/lib/locale/locale-archive`"
+                _locale_archive_size="$(du -sh /usr/lib/locale/locale-archive)"
                 echo "WARNING: the current file's size of '/usr/lib/locale/locale-archive' is '$_locale_archive_size'" >&2
             fi
         fi
         copy_file 'file' /usr/lib/locale/locale-archive # ignore failure
 
     # compiled locales
-    elif [ -d /usr/lib/locale/$LANG ]; then
-        for f in /usr/lib/locale/$LANG/LC_*; do
+    elif [ -d /usr/lib/locale/"$LANG" ]; then
+        for f in /usr/lib/locale/"$LANG"/LC_*; do
             copy_file 'file' "$f" # ignore failure
         done
 
@@ -204,20 +204,20 @@ if [ "$INITRAMFS_DISABLE_LOCALE" != "$TRUE" ]; then
     fi
 
     # copy cryptsetup locales
-    if [ -e /usr/share/locale/$_locale/LC_MESSAGES/cryptsetup.mo ]; then
-        copy_file 'file' /usr/share/locale/$_locale/LC_MESSAGES/cryptsetup.mo # ignore failure
+    if [ -e /usr/share/locale/"$_locale"/LC_MESSAGES/cryptsetup.mo ]; then
+        copy_file 'file' /usr/share/locale/"$_locale"/LC_MESSAGES/cryptsetup.mo # ignore failure
     fi
 fi
 
 # copy jmtpfs binary
-JMTPFS_BIN="`which jmtpfs 2>/dev/null||echo '/usr/bin/jmtpfs'`"
+JMTPFS_BIN="$(which jmtpfs 2>/dev/null||echo '/usr/bin/jmtpfs')"
 copy_exec "$JMTPFS_BIN" || exit 2
 
 # jmtpfs fail if there are no magic file directory, so we create it (empty)
 [ ! -d "$DESTDIR"/usr/share/misc/magic ] && mkdir -p "$DESTDIR"/usr/share/misc/magic || exit 2
 
 # copy keyctl binary (optional), for caching keys
-KEYCTL_BIN="`which keyctl 2>/dev/null||echo '/bin/keyctl'`"
+KEYCTL_BIN="$(which keyctl 2>/dev/null||echo '/bin/keyctl')"
 [ -x "$KEYCTL_BIN" ] && copy_exec "$KEYCTL_BIN" || exit 2
 
 

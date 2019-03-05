@@ -76,43 +76,39 @@ UTILS_INC_FILE="$INCLUDE_DIR"/utils.inc.sh
 . "$UTILS_INC_FILE"
 
 # internal constants
-_THIS_FILENAME="`basename "$0"`"
-_THIS_REALPATH="`realpath "$0"`"
+_THIS_FILENAME="$(basename "$0")"
+_THIS_REALPATH="$(realpath "$0")"
 _FLAG_WAITED_FOR_DEVICE_ALREADY="$TMPDIR"/.mtp-waited-already.flag
 _MTP_DEVICE_LIST_OUT="$TMPDIR"/.mtp_device.lst.out
 _JMTPFS_ERROR_LOGFILE="$TMPDIR"/.jmtpfs.err.log
 _FLAG_MTP_DEVICES_TO_SKIP="$TMPDIR"/.mtp_device_to_skip.lst.txt
 _PASSPHRASE_PROTECTED=$FALSE
-_MAPPING_LINE_REGEXP="^\([[:space:]]*[^$MAPPING_FILE_SEP]\+[[:space:]]*$MAPPING_FILE_SEP\)\{2\}[[:space:]]*[^$MAPPING_FILE_SEP]\+[[:space:]]*\$"
-_MAPPING_OPTS_REGEXP='^\(pass\([,; ]urlenc\)\?\|urlenc\([,; ]pass\)\?\)\?$'
 
 
 # display help informations (translated)
 usage()
 {
-    _t_keyfile="`__tt 'keyfile'`"
-    _opposite_filter_strategy="`if [ "$MTP_FILTER_STRATEGY" = 'whitelist' ]; then echo 'blacklist'; else echo 'whitelist'; fi`"
-    _opposite_filter_file="`echo "$MTP_FILTER_FILE"|sed "s/\.$MTP_FILTER_STRATEGY/.$_opposite_filter_strategy/"`"
+    _t_keyfile="$(__tt 'keyfile')"
     cat <<ENDCAT
  
-$_THIS_FILENAME - `__tt 'Print a key to STDOUT from a key file stored on a USB MTP device.'`
+$_THIS_FILENAME - $(__tt 'Print a key to STDOUT from a key file stored on a USB MTP device.')
   
-`__tt 'USAGE'`
+$(__tt 'USAGE')
  
     $_THIS_FILENAME [$_t_keyfile]  
     $_THIS_FILENAME [-h|--help]  
     $_THIS_FILENAME -v|--version
  
-`__tt 'ARGUMENTS'`
+$(__tt 'ARGUMENTS')
  
-    `__tt 'keyfile'`  (`__tt 'optional'`)    
-$USAGE_LEFT_MARGIN`__tt \
-"Is the path to a key file.\n
-The argument is optional if the env var %s is specified, required otherwise.\n
-It is relative to the device mount point/dir.\n
-Quotes ['"'"'"] will be removed at the begining and end.\n
-If it starts with '%s' it will be URL decoded.\n
-If it starts with '%s' it will be decrypted with '%s' on the file.\n
+    $(__tt 'keyfile')  ($(__tt 'optional'))    
+$USAGE_LEFT_MARGIN$(__tt \
+"Is the path to a key file.\\n
+The argument is optional if the env var %s is specified, required otherwise.\\n
+It is relative to the device mount point/dir.\\n
+Quotes ['"'"'"] will be removed at the begining and end.\\n
+If it starts with '%s' it will be URL decoded.\\n
+If it starts with '%s' it will be decrypted with '%s' on the file.\\n
 '%s' and '%s' can be combined in any order, i.e.: '%s' or '%s'." \
     'CRYPTTAB_KEY'    \
     'urlenc:' 'pass:' \
@@ -120,72 +116,72 @@ If it starts with '%s' it will be decrypted with '%s' on the file.\n
     'urlenc:' 'pass:' \
     'urlenc:pass:De%20toute%20beaut%c3%a9.jpg' \
     'pass:urlenc:De%20toute%20beaut%c3%a9.jpg' \
-|indent "$USAGE_LEFT_MARGIN" 2`
+|indent "$USAGE_LEFT_MARGIN" 2)
  
-`__tt 'OPTIONS'`
+$(__tt 'OPTIONS')
  
     -h|--help    
-$USAGE_LEFT_MARGIN`__tt 'Display this help.'`
+$USAGE_LEFT_MARGIN$(__tt 'Display this help.')
  
     -v|--version    
-$USAGE_LEFT_MARGIN`__tt 'Display the version of this script.'`
+$USAGE_LEFT_MARGIN$(__tt 'Display the version of this script.')
  
-`__tt 'ENVIRONMENT'`
+$(__tt 'ENVIRONMENT')
  
     CRYPTTAB_KEY    
-$USAGE_LEFT_MARGIN`__tt \
-"A path to a key file.\n
-The env var is optional if the argument '%s' is specified, required otherwise.\n
+$USAGE_LEFT_MARGIN$(__tt \
+"A path to a key file.\\n
+The env var is optional if the argument '%s' is specified, required otherwise.\\n
 Same process apply as for the '%s' argument, i.e.: removing quotes, URL decoding and decrypting." \
     "$_t_keyfile" \
     "$_t_keyfile" \
-|indent "$USAGE_LEFT_MARGIN" 2`
+|indent "$USAGE_LEFT_MARGIN" 2)
  
     crypttarget    
-$USAGE_LEFT_MARGIN`__tt \
-"The target device mapper name (unlocked).\n
+$USAGE_LEFT_MARGIN$(__tt \
+"The target device mapper name (unlocked).\\n
 It is used to do the mapping with a key if none is specified in the crypttab file, else informative only." \
-|indent "$USAGE_LEFT_MARGIN" 2`
+|indent "$USAGE_LEFT_MARGIN" 2)
  
     cryptsource    
-$USAGE_LEFT_MARGIN`__tt '(informative only) The disk source to unlock.'`
+$USAGE_LEFT_MARGIN$(__tt '(informative only) The disk source to unlock.')
  
 ENDCAT
     usage_environment
 
     cat <<ENDCAT
  
-`__tt 'FILES'`
+$(__tt 'FILES')
  
-    `__tt "Note: Paths may have changed, at installation time, by configuration or environment."`
+    $(__tt "Note: Paths may have changed, at installation time, by configuration or environment.")
  
     $SBINDIR/$PACKAGE_NAME    
-$USAGE_LEFT_MARGIN`__tt 'Default path to this shell script (to be included in the initramfs).'`
+$USAGE_LEFT_MARGIN$(__tt 'Default path to this shell script (to be included in the initramfs).')
  
     $SYSCONFDIR/$PACKAGE_NAME/default.conf    
-$USAGE_LEFT_MARGIN`__tt 'Default path to the default configuration file.'`
+$USAGE_LEFT_MARGIN$(__tt 'Default path to the default configuration file.')
  
     $SYSCONFDIR/$PACKAGE_NAME/local.conf    
-$USAGE_LEFT_MARGIN`__tt 'Default path to the local configuration file (i.e.: overrides default.conf).'`
+$USAGE_LEFT_MARGIN$(__tt 'Default path to the local configuration file (i.e.: overrides default.conf).')
  
     $SYSCONFDIR/$PACKAGE_NAME/mapping.conf    
-$USAGE_LEFT_MARGIN`__tt 'Default path to the file containing mapping between crypttab DM target and key file.'`
+$USAGE_LEFT_MARGIN$(__tt 'Default path to the file containing mapping between crypttab DM target and key file.')
  
     $SYSCONFDIR/$PACKAGE_NAME/devices.whitelist    
-$USAGE_LEFT_MARGIN`__tt 'Default path to the list of allowed USB MTP devices.'`
+$USAGE_LEFT_MARGIN$(__tt 'Default path to the list of allowed USB MTP devices.')
  
     $SYSCONFDIR/$PACKAGE_NAME/devices.blacklist
-$USAGE_LEFT_MARGIN`__tt 'Default path to the list of denied USB MTP devices.'`
+$USAGE_LEFT_MARGIN$(__tt 'Default path to the list of denied USB MTP devices.')
  
     $LIBDIR/$PACKAGE_NAME/tools/    
-$USAGE_LEFT_MARGIN`__tt 'Default path to the directory containg tool scripts to help managing configuration.'`
+$USAGE_LEFT_MARGIN$(__tt 'Default path to the directory containg tool scripts to help managing configuration.')
  
     /etc/initramfs-tools/hooks/$PACKAGE_NAME    
-$USAGE_LEFT_MARGIN`__tt 'Path to initramfs hook that inject required files into initramfs.'`
+$USAGE_LEFT_MARGIN$(__tt 'Path to initramfs hook that inject required files into initramfs.')
  
-`__tt 'EXAMPLES'`
+$(__tt 'EXAMPLES')
  
-    `__tt 'Use this script as a standalone shell command to unlock a disk'|comment`  
+    $(__tt 'Use this script as a standalone shell command to unlock a disk'|comment)  
     > crypttarget=md0_crypt cryptsource=/dev/disk/by-uuid/5163bc36 \\  
          $_THIS_REALPATH 'urlenc:M%c3%a9moire%20interne%2fkey.bin' \\  
     | cryptsetup open /dev/disk/by-uuid/5163bc36 md0_crypt
@@ -196,7 +192,7 @@ ENDCAT
 # URL decode a string (first and unique argument)
 urldecode()
 {
-    "$PRINTF" '%b' "`echo -n "$1"|sed "s/%/\\\\\x/g"`"
+    "$PRINTF" '%b' "$("$PRINTF" '%s' "$1"|sed "s/%/\\\\\\x/g")"
 }
 
 # print the list of available MTP devices
@@ -204,15 +200,15 @@ urldecode()
 mtp_device_availables()
 {
     jmtpfs -l 2>"$_JMTPFS_ERROR_LOGFILE"|tail -n +2 >"$_MTP_DEVICE_LIST_OUT"
-    if [ "$?" -ne $TRUE ]; then
+    if [ "$?" -ne "$TRUE" ]; then
         cat "$_JMTPFS_ERROR_LOGFILE" >&2
     fi
     filter_devices "$_MTP_DEVICE_LIST_OUT"
     cat "$_MTP_DEVICE_LIST_OUT"
-    if [ `wc -l "$_MTP_DEVICE_LIST_OUT"|awk '{print $1}'` -gt 0 ]; then
-        return $TRUE
+    if [ "$(wc -l "$_MTP_DEVICE_LIST_OUT"|awk '{print $1}')" -gt 0 ]; then
+        return "$TRUE"
     fi
-    return $FALSE
+    return "$FALSE"
 }
 
 # remove devices from a file based on whitelist/blacklist configuration
@@ -229,25 +225,28 @@ filter_devices()
             if [ -r "$MTP_FILTER_FILE" ]; then
 
                 # filter file is not empty
-                if [ `sed -e '/^[[:blank:]]*$/d' -e '/^[[:blank:]]*#/d' "$1"|wc -l|awk '{print $1}'` -gt 0 ]; then
+                if [ "$(sed -e '/^[[:blank:]]*$/d' -e '/^[[:blank:]]*#/d' "$1"|wc -l|awk '{print $1}')" -gt 0 ]; then
 
                     # temp file
-                    _temp_file="`mktemp`"
+                    _temp_file="$(mktemp)"
 
                     # for every MTP device listed
-                    sed -e '/^[[:blank:]]*$/d' -e '/^[[:blank:]]*#/d' "$1" | while read _line; do
-                        _product_id="`  echo "$_line"|awk -F ',' '{print $3}'|trim`"
-                        _vendor_id="`   echo "$_line"|awk -F ',' '{print $4}'|trim`"
-                        _product_name="`echo "$_line"|awk -F ',' '{print $5}'|trim|simplify_name`"
-                        _vendor_name="` echo "$_line"|awk -F ',' '{print $6}'|trim`"
+                    while read -r _line; do
+                        if echo "$_line"|grep -q '^[[:space:]]*#\|^[[:space:]]*$'; then
+                            continue
+                        fi
+                        _product_id="$(  echo "$_line"|awk -F ',' '{print $3}'|trim)"
+                        _vendor_id="$(   echo "$_line"|awk -F ',' '{print $4}'|trim)"
+                        _product_name="$(echo "$_line"|awk -F ',' '{print $5}'|trim|simplify_name)"
+                        _vendor_name="$( echo "$_line"|awk -F ',' '{print $6}'|trim)"
 
-                        _device_in_filter_list="`grep -q "^[[:space:]]*$_vendor_id[[:space:]]*[;,|	][[:space:]]*$_product_id\([[:space:]]\+\|$\)" "$MTP_FILTER_FILE"; echo $?`"
+                        _device_in_filter_list="$(grep -q "^[[:space:]]*${_vendor_id}[[:space:]]*[;,|	][[:space:]]*${_product_id}\\([[:space:]]\\+\\|$\\)" "$MTP_FILTER_FILE"; echo $?)"
 
                         # allowed devices are:
                         #   whitelist and device is listed
                         #   or blacklist and device is not listed
-                        if [ "$MTP_FILTER_STRATEGY" = "whitelist" -a "$_device_in_filter_list" = "$TRUE" ] \
-                        || [ "$MTP_FILTER_STRATEGY" = "blacklist" -a "$_device_in_filter_list" = "$FALSE" ]; then
+                        if { [ "$MTP_FILTER_STRATEGY" = "whitelist" ] && [ "$_device_in_filter_list" = "$TRUE" ]; } \
+                        || { [ "$MTP_FILTER_STRATEGY" = "blacklist" ] && [ "$_device_in_filter_list" = "$FALSE" ]; }; then
                             debug "Allowing device '%s' (%s)" "$_vendor_name, $_product_name" "$MTP_FILTER_STRATEGY filter"
                             echo "$_line" >> "$_temp_file"
 
@@ -255,7 +254,7 @@ filter_devices()
                         else
                             warning "$(__tt "Excluding device '%s' (%s)" "$_vendor_name, $_product_name" "$MTP_FILTER_STRATEGY filter")"
                         fi
-                    done
+                    done <"$1"
 
                     # replace device list by the temp file content
                     mv "$_temp_file" "$1" >/dev/null
@@ -278,7 +277,7 @@ filter_devices()
     # no device file
     else
         error "$(__tt "MTP device list file '%s' doesn't exist nor is readable" "$1")"
-        return $FALSE
+        return "$FALSE"
     fi
 }
 
@@ -299,10 +298,10 @@ mount_mtp_device()
     if ! mount|grep -q "jmtpfs.*$1"; then
 
         # mount the device (read-only)
-        if ! jmtpfs "$1" -o ro -device=$2 >/dev/null 2>"$_JMTPFS_ERROR_LOGFILE"; then
+        if ! jmtpfs "$1" -o ro -device="$2" >/dev/null 2>"$_JMTPFS_ERROR_LOGFILE"; then
             cat "$_JMTPFS_ERROR_LOGFILE" >&2
             error "$(__tt "%s failed to mount device '%s'" "'jmtpfs'" "$3")"
-            return $FALSE
+            return "$FALSE"
         else
             debug "Mounted device '%s'" "$3"
         fi
@@ -311,7 +310,7 @@ mount_mtp_device()
     else
         debug "Device '%s' is already mounted" "$3"
     fi
-    return $TRUE
+    return "$TRUE"
 }
 
 # unmount a USB MTP device
@@ -335,39 +334,48 @@ unmount_mtp_device()
 }
 
 # print the content of the key file specified
+# $1  string  the key file path
+# $2  string  the DM target
 use_keyfile()
 {
     debug "Using key file '%s'" "$1"
-    _backup="`if [ "$1" = "$KEYFILE_BAK" ]; then printf ' '; __tt 'backup'; fi`"
-    _msg="$(__tt "Unlocking '%s' with%s key file '%s' ..." "$crypttarget" "$_backup" "`basename "$1"`")"
+    _backup="$(if [ "$1" = "$KEYFILE_BAK" ]; then printf ' '; __tt 'backup'; fi)"
+    _msg="$(__tt "Unlocking '%s' with%s key file '%s' ..." "$2" "$_backup" "$(basename "$1")")"
     if [ "$DISPLAY_KEY_FILE" = "$FALSE" ]; then
-        _msg="$(__tt "Unlocking '%s' with%s key file ..." "$crypttarget" "$_backup")"
+        _msg="$(__tt "Unlocking '%s' with%s key file ..." "$2" "$_backup")"
     fi
     info "$_msg"
+    if [ "$DEBUG" = "$TRUE" ]; then
+        debug "Hit '%s' to continue ..." 'enter'
+        read -r cont >/dev/null
+    fi
     cat "$1"
 }
 
 # fall back helper, that first try a backup key file then askpass
+# $1  string  the DM target
 fallback()
 {
     debug "Fallback"
 
     # use backup keyfile (if exists)
     if [ -e "$KEYFILE_BAK" ]; then
-        use_keyfile "$KEYFILE_BAK"
+        use_keyfile "$KEYFILE_BAK" "$1"
         exit 0
     fi
 
     # fall back to askpass (to manually unlock the device)
-    /lib/cryptsetup/askpass "`__tt "Please manually enter the passphrase to unlock disk '%s'" "$crypttarget"`"
+    "$ASKPASS" "$(__tt "Please manually enter the passphrase to unlock disk '%s'" "$1")"
     
     exit 0
 }
 
 
 # display help (if asked or nothing is specified)
-if [ "$1" = '-h' -o "$1" = '--help' ] \
-|| [ "$1" = '' -o "`echo "$1"|grep -q '\--\?[a-zA-Z]'||echo $TRUE`" != "$TRUE" ] && [ "$CRYPTTAB_KEY" = '' -a "$crypttarget" = '' ]; then
+if [ "$1" = '-h' ] || [ "$1" = '--help' ] || [ "$1" = '' ] \
+|| [ "$(echo "$1"|grep -q '\--\?[a-zA-Z]'||echo "$TRUE")" != "$TRUE" ] \
+&& [ "$CRYPTTAB_KEY" = '' ] && [ "$crypttarget" = '' ]
+then
     . "$USAGE_INC_FILE"
     usage
     usage_bottom
@@ -375,7 +383,7 @@ if [ "$1" = '-h' -o "$1" = '--help' ] \
 fi
 
 # display version
-if [ "$1" = '-v' -o "$1" = '--version' ]; then
+if [ "$1" = '-v' ] || [ "$1" = '--version' ]; then
     . "$USAGE_INC_FILE"
     version
     copyright
@@ -393,12 +401,12 @@ echo >&2
 debug "LANG=$LANG, LANGUAGE=$LANGUAGE, TEXTDOMAINDIR=$TEXTDOMAINDIR"
 
 # key is specified (either by env var or argument)
-if [ "$CRYPTTAB_KEY" = '' -a "$1" != '' ]; then
+if [ "$CRYPTTAB_KEY" = '' ] && [ "$1" != '' ]; then
     CRYPTTAB_KEY="$1"
 fi
 
 # key is not specified but the DM target is specified
-if [ "$CRYPTTAB_KEY" = '' -a "$crypttarget" != '' ]; then
+if [ "$CRYPTTAB_KEY" = '' ] && [ "$crypttarget" != '' ]; then
     debug "No CRYPTTAB_KEY specified but a DM target '%s'" "$crypttarget"
 
     # there is a mapping file
@@ -406,20 +414,22 @@ if [ "$CRYPTTAB_KEY" = '' -a "$crypttarget" != '' ]; then
         debug "Mapping file '%s' found" "$MAPPING_FILE"
 
         # a line match in the mapping file
-        _matching_line="`grep "^[[:space:]]*$crypttarget[[:space:]]" "$MAPPING_FILE"|tail -n 1||true`"
+        _matching_line="$(grep "^[[:space:]]*${crypttarget}[[:space:]]" "$MAPPING_FILE"|tail -n 1||true)"
         if [ "$_matching_line" != '' ]; then
             debug "Matching line '%s' found" "$_matching_line"
-            _key_opts="` echo "$_matching_line"|awk -F "$MAPPING_FILE_SEP" '{print $2}'|trim`"
-            _key_path="` echo "$_matching_line"|awk -F "$MAPPING_FILE_SEP" '{print $3}'|trim`"
+            _key_opts="$( echo "$_matching_line"|awk -F "$MAPPING_FILE_SEP" '{print $2}'|trim)"
+            _key_path="$( echo "$_matching_line"|awk -F "$MAPPING_FILE_SEP" '{print $3}'|trim)"
             debug "Key options: '%s'" "$_key_opts"
             debug "Key path: '%s'" "$_key_path"
 
             # build a key value from it
             CRYPTTAB_KEY="$_key_path"
             if [ "$_key_opts" != '' ]; then
-                CRYPTTAB_KEY="`echo "$_key_opts"|sed -e 's/[,; ]/:/g' -e 's/:\+/:/g'`:$CRYPTTAB_KEY"
+                CRYPTTAB_KEY="$(echo "$_key_opts"|sed -e 's/[,; ]/:/g' -e 's/:\+/:/g'):$CRYPTTAB_KEY"
             fi
             debug "New CRYPTTAB_KEY: '%s'" "$CRYPTTAB_KEY"
+        else
+            debug "No matching line in mapping file '%s'" "$MAPPING_FILE"
         fi
     else
         debug "No mapping file '%s' found" "$MAPPING_FILE"
@@ -431,34 +441,35 @@ if [ "$CRYPTTAB_KEY" != '' ]; then
 
     # remove quoting
     if echo "$CRYPTTAB_KEY"|grep -q '^["'"'"']\|["'"'"']$'; then
-        CRYPTTAB_KEY="`echo "$CRYPTTAB_KEY"|sed 's/^["'"'"']*//g;s/["'"'"']*$//g'`"
+        CRYPTTAB_KEY="$(echo "$CRYPTTAB_KEY"|sed 's/^["'"'"']*//g;s/["'"'"']*$//g')"
     fi
 
     # passphrase protected
     if echo "$CRYPTTAB_KEY"|grep -q '^\(urlenc:\)\?pass:'; then
-        CRYPTTAB_KEY="`echo "$CRYPTTAB_KEY"|sed 's/^\(urlenc:\)\?pass:/\1/g'`"
+        CRYPTTAB_KEY="$(echo "$CRYPTTAB_KEY"|sed 's/^\(urlenc:\)\?pass:/\1/g')"
         _PASSPHRASE_PROTECTED=$TRUE
         debug "Key will be passphrase protected"
     fi
 
     # URL decode (if encoded)
     if echo "$CRYPTTAB_KEY"|grep -q '^urlenc:'; then
-        CRYPTTAB_KEY="`echo "$CRYPTTAB_KEY"|sed 's/^urlenc://g'`"
-        CRYPTTAB_KEY="`urldecode "$CRYPTTAB_KEY"`"
+        CRYPTTAB_KEY="$(echo "$CRYPTTAB_KEY"|sed 's/^urlenc://g')"
+        CRYPTTAB_KEY="$(urldecode "$CRYPTTAB_KEY")"
     fi
 fi
 
 # key is still not specified
 if [ "$CRYPTTAB_KEY" = '' ]; then
+    debug "CRYPTTAB_KEY is empty"
 
     # directly fallback
-    fallback
+    fallback "$crypttarget"
 fi
 debug "CRYPTTAB_KEY='$CRYPTTAB_KEY'"
 
 # key file exist and it readable -> use it directly
 if [ -r "$CRYPTTAB_KEY" ]; then
-    use_keyfile "$CRYPTTAB_KEY"
+    use_keyfile "$CRYPTTAB_KEY" "$crypttarget"
     exit 0
 fi
 
@@ -476,7 +487,7 @@ if [ "$KERNEL_CACHE_ENABLED" = "$TRUE" ]; then
     # key has been cached
     for _checksum in shasum md5sum; do
         if which "$_checksum" >/dev/null 2>&1; then
-            _key_id="`echo "$CRYPTTAB_KEY"|$_checksum|awk '{print $1}'`"
+            _key_id="$(echo "$CRYPTTAB_KEY"|$_checksum|awk '{print $1}')"
             break
         fi
     done
@@ -484,12 +495,12 @@ if [ "$KERNEL_CACHE_ENABLED" = "$TRUE" ]; then
         _key_id="$CRYPTTAB_KEY"
     fi
     debug "Key ID '%s'" "$_key_id"
-    _k_id="`keyctl search @u user "$_key_id" 2>/dev/null||true`"
+    _k_id="$(keyctl search @u user "$_key_id" 2>/dev/null||true)"
     if [ "$_k_id" != '' ]; then
 
         # use it
         debug "Using cached key '%s' (%s)" "$_key_id" "$_k_id"
-        info "`__tt "Unlocking '%s' with cached key '%s' ..." "$crypttarget" "$_k_id"`"
+        info "$(__tt "Unlocking '%s' with cached key '%s' ..." "$crypttarget" "$_k_id")"
         keyctl pipe "$_k_id"
         exit 0
     fi
@@ -504,10 +515,10 @@ fi
 
 # ensure usb_common and fuse modules are runing
 for _module in usb_common fuse; do
-    if [ "`modprobe -nv $_module 2>&1||true`" != '' ]; then
+    if [ "$(modprobe -nv $_module 2>&1||true)" != '' ]; then
         debug "Loading kernel module '%s'" "$_module"
     fi
-    modprobe -q $_module
+    modprobe -q "$_module"
 done
 
 # setup flag file to skip devices
@@ -517,17 +528,17 @@ fi
 
 # wait for an MTP device to be available
 if [ ! -e "$_FLAG_WAITED_FOR_DEVICE_ALREADY" ]; then
-    sleep $MTP_SLEEP_SEC_BEFORE_WAIT >/dev/null
-    _device_availables="`mtp_device_availables||true`"
+    sleep "$MTP_SLEEP_SEC_BEFORE_WAIT" >/dev/null
+    _device_availables="$(mtp_device_availables||true)"
     if [ "$_device_availables" = '' ]; then
-        info "`__tt "Waiting for an MTP device to become available (max %ss) ..." "${MTP_WAIT_MAX}"`"
-        for i in `seq $MTP_WAIT_TIME $MTP_WAIT_TIME $MTP_WAIT_MAX`; do
-            _device_availables="`mtp_device_availables||true`"
+        info "$(__tt "Waiting for an MTP device to become available (max %ss) ..." "${MTP_WAIT_MAX}")"
+        for i in $(seq "$MTP_WAIT_TIME" "$MTP_WAIT_TIME" "$MTP_WAIT_MAX"); do
+            _device_availables="$(mtp_device_availables||true)"
             if [ "$_device_availables" != '' ]; then
                 break
             fi
             debug "Sleeping ${MTP_WAIT_TIME}s"
-            sleep $MTP_WAIT_TIME >/dev/null
+            sleep "$MTP_WAIT_TIME" >/dev/null
         done
     fi
     if [ "$_device_availables" = '' ]; then
@@ -539,23 +550,23 @@ else
 fi
 
 # create a file in order to catch the result of the subshell
-_result_file="`mktemp`"
+_result_file="$(mktemp)"
 
 # for every MTP device
-{ cat "$_MTP_DEVICE_LIST_OUT" | while read _line; do
+while read -r _line; do
     debug "Device line: '%s'" "$_line"
 
     # decompose line data
-    _bus_num="`     echo "$_line"|awk -F ',' '{print $1}'|trim`"
-    _device_num="`  echo "$_line"|awk -F ',' '{print $2}'|trim`"
-    _product_id="`  echo "$_line"|awk -F ',' '{print $3}'|trim`"
-    _vendor_id="`   echo "$_line"|awk -F ',' '{print $4}'|trim`"
-    _product_name="`echo "$_line"|awk -F ',' '{print $5}'|trim|simplify_name`"
-    _vendor_name="` echo "$_line"|awk -F ',' '{print $6}'|trim`"
+    _bus_num="$(     echo "$_line"|awk -F ',' '{print $1}'|trim)"
+    _device_num="$(  echo "$_line"|awk -F ',' '{print $2}'|trim)"
+    _product_id="$(  echo "$_line"|awk -F ',' '{print $3}'|trim)"
+    _vendor_id="$(   echo "$_line"|awk -F ',' '{print $4}'|trim)"
+    _product_name="$(echo "$_line"|awk -F ',' '{print $5}'|trim|simplify_name)"
+    _vendor_name="$( echo "$_line"|awk -F ',' '{print $6}'|trim)"
 
     # get a unique mount path for this device
-    _product_name_nospace="`echo "$_product_name"|sed 's/[^a-zA-Z0-9.+ -]//g;s/[[:blank:]]\+/-/g'`"
-    _vendor_name_nospace="`echo "$_vendor_name"|sed 's/[^a-zA-Z0-9.+ -]//g;s/[[:blank:]]\+/-/g'`"
+    _product_name_nospace="$(echo "$_product_name"|sed 's/[^a-zA-Z0-9.+ -]//g;s/[[:blank:]]\+/-/g')"
+    _vendor_name_nospace="$(echo "$_vendor_name"|sed 's/[^a-zA-Z0-9.+ -]//g;s/[[:blank:]]\+/-/g')"
     _device_unique_id=${_vendor_name_nospace}--${_product_name_nospace}--${_bus_num}-${_device_num}
     _mount_path="$MOUNT_BASE_DIR"/mtp--$_device_unique_id
 
@@ -577,12 +588,12 @@ _result_file="`mktemp`"
 
         # assuming the device is locked (and need user manual unlocking)
         # so ask the user to do so, and wait for its input to continue or skip
-        info "`__tt "Please unlock the device '%s', then hit enter ... ('s' to skip)" "${_vendor_name}, ${_product_name}"`"
-        read unlocked >/dev/null <&3
+        info "$(__tt "Please unlock the device '%s', then hit enter ... ('s' to skip)" "${_vendor_name}, ${_product_name}")"
+        read -r unlocked >/dev/null <&3
 
         # skip unlocking (give up)
-        if [ "$unlocked" = 's' -o "$unlocked" = 'S' ]; then
-            info "`__tt "Skipping unlocking device '%s'" "${_vendor_name}, ${_product_name}"`"
+        if [ "$unlocked" = 's' ] || [ "$unlocked" = 'S' ]; then
+            info "$(__tt "Skipping unlocking device '%s'" "${_vendor_name}, ${_product_name}")"
 
         # device should be unlocked
         else
@@ -593,7 +604,7 @@ _result_file="`mktemp`"
 
                 # try unmounting/mounting
                 unmount_mtp_device "$_mount_path"  "${_vendor_name}, ${_product_name}"
-                sleep $MTP_RETRY_MOUNT_DELAY_SEC >/dev/null
+                sleep "$MTP_RETRY_MOUNT_DELAY_SEC" >/dev/null
                 mount_mtp_device "$_mount_path" "${_bus_num},${_device_num}" "${_vendor_name}, ${_product_name}"||true
             fi
         fi
@@ -616,11 +627,11 @@ _result_file="`mktemp`"
     _keyfile_path="$_mount_path"/"$CRYPTTAB_KEY"
     if [ ! -e "$_keyfile_path" ]; then
         debug "Keyfile '%s' not found" "$_keyfile_path"
-        _keyfile_path="`realpath "$_mount_path"/*/"$CRYPTTAB_KEY" 2>/dev/null||true`"
+        _keyfile_path="$(realpath "$_mount_path"/*/"$CRYPTTAB_KEY" 2>/dev/null||true)"
     fi
 
     # key file found
-    if [ "$_keyfile_path" != '' -a -e "$_keyfile_path" ]; then
+    if [ "$_keyfile_path" != '' ] && [ -e "$_keyfile_path" ]; then
         debug "Found cryptkey at '%s'" "$_keyfile_path"
         _keyfile_to_use="$_keyfile_path"
 
@@ -628,20 +639,20 @@ _result_file="`mktemp`"
         if [ "$_PASSPHRASE_PROTECTED" = "$TRUE" ]; then
 
             # ensure loop module is loaded
-            if [ "`modprobe -nv 'loop' 2>&1||true`" != '' ]; then
+            if [ "$(modprobe -nv 'loop' 2>&1||true)" != '' ]; then
                 debug "Loading kernel module 'loop'"
             fi
             modprobe -q loop
 
             # name the device mapper
-            _device_mapper_name="`basename "$_keyfile_path"|sed -e 's/\./-/g' -e 's/[^a-zA-Z0-9_+ -]//g;s/[[:blank:]]\+/-/g'`_crypt"
+            _device_mapper_name="$(basename "$_keyfile_path"|sed -e 's/\./-/g' -e 's/[^a-zA-Z0-9_+ -]//g;s/[[:blank:]]\+/-/g')_crypt"
             debug "Device mapper name is: '%s'" "$_device_mapper_name"
 
             # ask for passphrase
             _key_decrypted=$FALSE
             debug "Key is passphrase protected, so trying to decrypt it by asking the user"
             if ! cryptsetup open --readonly "$_keyfile_path" "$_device_mapper_name" >/dev/null <&3; then
-                error "$(__tt "Failed to decrypt key '%s' with cryptsetup" "`basename "$_keyfile_path"`")"
+                error "$(__tt "Failed to decrypt key '%s' with cryptsetup" "$(basename "$_keyfile_path")")"
             elif [ ! -e "/dev/mapper/$_device_mapper_name" ]; then
                 error "$(__tt "Key decrypted but device mapper '%s' doesn't exists! Bug?" "/dev/mapper/$_device_mapper_name")"
             else
@@ -665,15 +676,15 @@ _result_file="`mktemp`"
 
         # cache the key
         if [ "$KERNEL_CACHE_ENABLED" = "$TRUE" ]; then
-            _k_id="`cat "$_keyfile_to_use"|keyctl padd user "$_key_id" @u||true`"
+            _k_id="$(keyctl padd user "$_key_id" @u <"$_keyfile_to_use"||true)"
 
             # caching failed
             if [ "$_k_id" = '' ]; then
                 warning "$(__tt "Failed to add key '%s' to kernel cache" "$_key_id")"
 
                 # it might be because the data content exceeds the cache max size
-                _key_content_size="`du -sk "$_keyfile_to_use"|awk '{print $1}'||true`"
-                if [ "$_key_content_size" != '' -a "$_key_content_size" -ge "$KERNEL_CACHE_MAX_SIZE_KB" ]; then
+                _key_content_size="$(du -sk "$_keyfile_to_use"|awk '{print $1}'||true)"
+                if [ "$_key_content_size" != '' ] && [ "$_key_content_size" -ge "$KERNEL_CACHE_MAX_SIZE_KB" ]; then
                     warning "$(__tt "Key content size '%s' exceeds cache max size of '%s'" "$_key_content_size" "$KERNEL_CACHE_MAX_SIZE_KB")"
                     warning "$(__tt "The content for key '%s' cannot be cached" "$_key_id")"
                 elif [ "$_key_content_size" != '' ]; then
@@ -700,7 +711,7 @@ _result_file="`mktemp`"
         fi
 
         # use the key file
-        use_keyfile "$_keyfile_to_use"
+        use_keyfile "$_keyfile_to_use" "$crypttarget"
         echo "$TRUE" > "$_result_file"
 
         # passphrase protected and key file is a device mapped
@@ -725,15 +736,15 @@ _result_file="`mktemp`"
     unmount_mtp_device "$_mount_path"  "${_vendor_name}, ${_product_name}"
 
     # next device
-done } 3<&0
+done < "$_MTP_DEVICE_LIST_OUT"
 
 # failed to get a key
-if [ ! -e "$_result_file" -o "`head -n 1 "$_result_file"|trim`" != "$TRUE" ]; then
+if [ ! -e "$_result_file" ] || [ "$(head -n 1 "$_result_file"|trim)" != "$TRUE" ]; then
     debug "Failed to get a key"
     rm -f "$_result_file"||true
 
     # fall back
-    fallback
+    fallback "$crypttarget"
 fi
 rm -f "$_result_file"||true
 

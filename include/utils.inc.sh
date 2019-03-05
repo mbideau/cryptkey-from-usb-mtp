@@ -63,9 +63,9 @@ simplify_name()
 # $.. string  string to substitute to '%s' (see printf format)
 __tt()
 {
-    _t="`"$GETTEXT" "$1"|tr -d '\n'|trim`"
+    _t="$("$GETTEXT" "$1"|tr -d '\n'|trim)"
     shift
-    printf "$_t\n" "$@"
+    printf "$_t\\n" "$@"
 }
 
 # indent input (from STDIN)
@@ -90,20 +90,21 @@ comment()
 debug()
 {
     if [ "$DEBUG" = "$TRUE" ]; then
-        printf "$@"|sed 's/^/[DEBUG]  /g' >&2
-        printf "\n" >&2
+        _fmt="$1"
+        shift
+        printf "$_fmt\\n" "$@"|sed 's/^/[DEBUG]  /g' >&2
     fi
 }
 info()
 {
     echo "$@" >&2
 }
-MSG_PREFIX_LOCALIZED_WARNING=`__tt 'WARNING'`
+MSG_PREFIX_LOCALIZED_WARNING="$(__tt 'WARNING')"
 warning()
 {
     echo "$@"|sed "s/^/$MSG_PREFIX_LOCALIZED_WARNING: /g" >&2
 }
-MSG_PREFIX_LOCALIZED_ERROR=`__tt 'ERROR'`
+MSG_PREFIX_LOCALIZED_ERROR="$(__tt 'ERROR')"
 error()
 {
     echo "$@"|sed "s/^/$MSG_PREFIX_LOCALIZED_ERROR: /g" >&2

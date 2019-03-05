@@ -25,10 +25,10 @@
 set -e
 
 # use printf binary
-PRINTF="`which printf`"
+PRINTF="$(which printf)"
 
 # this script filename
-_THIS_FILENAME="`basename "$0"`"
+_THIS_FILENAME="$(basename "$0")"
 
 # usage
 usage()
@@ -50,32 +50,32 @@ ENDCAT
 # inspired/copied from here: https://stackoverflow.com/a/10660730
 urlencode()
 {
-    _strlen="`echo -n "$1"|wc -c`"
+    _strlen="$(printf '%s' "$1"|wc -c)"
     _encoded=
-    for _pos in `seq 1 $_strlen`; do
-        _c=`echo -n "$1"|cut -c $_pos`
+    for _pos in $(seq 1 "$_strlen"); do
+        _c=$(printf '%s' "$1"|cut -c "$_pos")
         case "$_c" in
             [-_.a-zA-Z0-9] ) _o="$_c" ;;
-            * )              _o="`printf '%%%02x' "'$_c'"`" ;;
+            * )              _o="$(printf '%%%02x' "'$_c'")" ;;
         esac
         _encoded="${_encoded}$_o"
     done
-    echo -n "$_encoded"
+    printf '%s' "$_encoded"
 }
 # URL decode a string (first and unique argument)
 urldecode()
 {
-    "$PRINTF" '%b' "`echo -n "$1"|sed "s/%/\\\\\x/g"`"
+    "$PRINTF" '%b' "$("$PRINTF" '%s' "$1"|sed "s/%/\\\\\\x/g")"
 }
 
 # display help
-if [ "$1" = '' -o "$1" = '-h' -o "$1" = '--help' ]; then
+if [ "$1" = '' ] || [ "$1" = '-h' ] || [ "$1" = '--help' ]; then
     usage
     exit 0
 fi
 
 # decode the string
-if [ "$1" = '-d' -o "$1" = '--decode' ]; then
+if [ "$1" = '-d' ] || [ "$1" = '--decode' ]; then
 	urldecode "$2"
 	echo
 

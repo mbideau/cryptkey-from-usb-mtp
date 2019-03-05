@@ -35,7 +35,7 @@ SBINDIR="$PREFIX"/sbin
 DATAROOTDIR="$PREFIX"/share
 
 # default initramfs file to current kernel one
-INITRAMFS_PATH_DEFAULT=/boot/initrd.img-`uname -r`
+INITRAMFS_PATH_DEFAULT=/boot/initrd.img-$(uname -r)
 
 # main script file
 SCRIPT_FILE="$SBINDIR"/cryptkey-from-usb-mtp
@@ -60,7 +60,7 @@ UTILS_INC_FILE="$INCLUDE_DIR"/utils.inc.sh
 . "$UTILS_INC_FILE"
 
 # this script filename
-_THIS_FILENAME="`basename "$0"`"
+_THIS_FILENAME="$(basename "$0")"
 
 
 # usage
@@ -69,38 +69,38 @@ usage()
     USAGE_LEFT_MARGIN='        '
     cat <<ENDCAT
 
-$_THIS_FILENAME - `__tt "Check that every requirements had been copied inside the initramfs"`
+$_THIS_FILENAME - $(__tt "Check that every requirements had been copied inside the initramfs")
 
-`__tt 'USAGE'`
+$(__tt 'USAGE')
 
-    $_THIS_FILENAME [`__tt 'INITRAMFS_FILE'`]
+    $_THIS_FILENAME [$(__tt 'INITRAMFS_FILE')]
     $_THIS_FILENAME -h|--help
 
-`__tt 'ARGUMENTS'`
+$(__tt 'ARGUMENTS')
 
-    `__tt 'INITRAMFS_FILE'` (`__tt 'optional'`)
-        `__tt "The path to an initramfs file (i.e.: %s)\n
+    $(__tt 'INITRAMFS_FILE') ($(__tt 'optional'))
+        $(__tt "The path to an initramfs file (i.e.: %s)\\n
         Default to: '%s'" \
-            '/boot/initrd.img-*' '/boot/initrd.img-\`uname -r\`'`
+            '/boot/initrd.img-*' "/boot/initrd.img-\$(uname -r)")
 
-`__tt 'OPTIONS'`
+$(__tt 'OPTIONS')
  
     -h|--help    
-        `__tt 'Display this help.'`
+        $(__tt 'Display this help.')
  
-`__tt 'ENVIRONMENT'`
+$(__tt 'ENVIRONMENT')
  
 ENDCAT
     usage_environment
 
     cat <<ENDCAT
  
-`__tt 'EXAMPLES'`
+$(__tt 'EXAMPLES')
 
-    `__tt "Check current kernel initramfs"|comment`
+    $(__tt "Check current kernel initramfs"|comment)
     > $_THIS_FILENAME
 
-    `__tt "Check a specific initramfs"|comment`
+    $(__tt "Check a specific initramfs"|comment)
     > $_THIS_FILENAME /boot/initrd.img-4.18.0-3-amd64
 
 ENDCAT
@@ -111,7 +111,7 @@ ENDCAT
 # $2  string  the file containing lsinitramfs output
 check_path()
 {
-    _path="`echo "$1"|sed 's#^/##'`"
+    _path="$(echo "$1"|sed 's#^/##')"
     _ret=0
     if ! grep -q "$_path" "$2"; then
         debug " missing '$_path'"
@@ -125,7 +125,7 @@ check_path()
 # check that every requirements had been copied inside the initramfs specified
 check_initramfs()
 {
-    _tmpfile="`mktemp`"
+    _tmpfile="$(mktemp)"
     _error_found=$FALSE
     # list files inside initramfs
     debug "Getting the list of files in initramfs '$1'"
@@ -133,22 +133,22 @@ check_initramfs()
 
     # kernel modules usb and fuse
     for _module in usb-common fuse; do
-        if ! check_path "${_module}\.ko" "$_tmpfile"; then
-            error "$(__tt "Kernel module '%s' (%s) not found in '%s'" "$_module" "${_module}\.ko" "$1")"
+        if ! check_path "${_module}\\.ko" "$_tmpfile"; then
+            error "$(__tt "Kernel module '%s' (%s) not found in '%s'" "$_module" "${_module}\\.ko" "$1")"
             _error_found=$TRUE
         fi
     done
 
     # libraries usb and fuse
     for _library in usb fuse; do
-        if ! check_path "lib${_library}\(-[0-9.]\+\)\?\.so" "$_tmpfile"; then
-            error "$(__tt "Library '%s' (%s) not found in '%s'" "$_library" "lib${_library}\(-[0-9.]\+\)\?\.so" "$1")"
+        if ! check_path "lib${_library}\\(-[0-9.]\\+\\)\\?\\.so" "$_tmpfile"; then
+            error "$(__tt "Library '%s' (%s) not found in '%s'" "$_library" "lib${_library}\\(-[0-9.]\\+\\)\\?\\.so" "$1")"
             _error_found=$TRUE
         fi
     done
 
     # jmtpfs binary
-    jmtpf_path="`which jmtpfs`"
+    jmtpf_path="$(which jmtpfs)"
     if ! check_path "$jmtpf_path" "$_tmpfile"; then
         error "$(__tt "Binary '%s' (%s) not found in '%s'" 'jmtpfs' "$jmtpf_path" "$1")"
         _error_found=$TRUE
@@ -162,7 +162,7 @@ check_initramfs()
     fi
 
     # keyctl binary (optional)
-    keyctl_path="`which keyctl`"
+    keyctl_path="$(which keyctl)"
     if ! check_path "$keyctl_path" "$_tmpfile"; then
         warning "$(__tt "Binary '%s' (%s) not found in '%s'" 'keyctl' "$keyctl_path" "$1")"
     fi
@@ -198,9 +198,9 @@ check_initramfs()
     if [ "$INITRAMFS_DISABLE_LOCALE" != "$TRUE" ]; then
 
         # current locale
-        _locale=*
+        _locale='*'
         if [ "$LANG" !=  '' ]; then
-            _locale="`echo "$LANG"|cut -c -2|tr '[:upper:]' '[:lower:]'`"
+            _locale="$(echo "$LANG"|cut -c -2|tr '[:upper:]' '[:lower:]')"
         fi
 
         # check the locales
@@ -221,8 +221,8 @@ check_initramfs()
             fi
 
         # compiled locales
-        elif [ -d /usr/lib/locale/$LANG ]; then
-            for f in /usr/lib/locale/$LANG/LC_*; do
+        elif [ -d /usr/lib/locale/"$LANG" ]; then
+            for f in /usr/lib/locale/"$LANG"/LC_*; do
                 if ! check_path "$f" "$_tmpfile"; then
                     warning "$(__tt "Locale file '%s' not found in '%s'" "$f" "$1")"
                 fi
@@ -230,8 +230,8 @@ check_initramfs()
         fi
 
         # copy cryptsetup locales
-        if [ -e /usr/share/locale/$_locale/LC_MESSAGES/cryptsetup.mo ]; then
-            if ! check_path "/usr/share/locale/$_locale/LC_MESSAGES/cryptsetup.mo" "$_tmpfile"; then
+        if [ -e /usr/share/locale/"$_locale"/LC_MESSAGES/cryptsetup.mo ]; then
+            if ! check_path /usr/share/locale/"$_locale"/LC_MESSAGES/cryptsetup.mo "$_tmpfile"; then
                 warning "$(__tt "Cryptsetup's locale file '%s' not found in '%s'" "/usr/share/locale/$_locale/LC_MESSAGES/cryptsetup.mo" "$1")"
             fi
         fi
@@ -242,17 +242,17 @@ check_initramfs()
 
     # on error
     if [ "$_error_found" = "$TRUE" ]; then
-        error "$(__tt "To further investigate, you can use this command to list files inside initramfs:\n> %s" "lsinitramfs "'"'"$1"'"')"
-        return $FALSE
+        error "$(__tt "To further investigate, you can use this command to list files inside initramfs:\\n> %s" "lsinitramfs "'"'"$1"'"')"
+        return "$FALSE"
     fi
 
     # success
-    info "`__tt "OK. Initramfs '%s' seems to contain every thing required." "$1"`"
-    return $TRUE
+    info "$(__tt "OK. Initramfs '%s' seems to contain every thing required." "$1")"
+    return "$TRUE"
 }
 
 # display help
-if [ "$1" = '-h' -o "$1" = '--help' ]; then
+if [ "$1" = '-h' ] || [ "$1" = '--help' ]; then
     . "$USAGE_INC_FILE"
     usage
     usage_bottom

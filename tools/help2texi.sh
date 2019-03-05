@@ -40,11 +40,11 @@ export LANG
 export LANGUAGE
 
 # gettext binary
-GETTEXT="`which gettext 2>/dev/null||which echo`"
+GETTEXT="$(which gettext 2>/dev/null||which echo)"
 
 # this script filename and path
-_THIS_FILENAME="`basename "$0"`"
-_THIS_REALPATH="`realpath "$0"`"
+_THIS_FILENAME="$(basename "$0")"
+_THIS_REALPATH="$(realpath "$0")"
 
 # display usage
 usage()
@@ -180,14 +180,14 @@ trim()
 # $.. string  string to substitute to '%s' (see printf format)
 __tt()
 {
-    _t="`"$GETTEXT" "$1"|tr -d '\n'|trim`"
+    _t="$("$GETTEXT" "$1"|tr -d '\n'|trim)"
     shift
-    printf "$_t\n" "$@"
+    printf "$_t\\n" "$@"
 }
 
 
 # display help
-if [ "$1" = '' -o "$1" = '-h' -o "$1" = '--help' ]; then
+if [ "$1" = '' ] || [ "$1" = '-h' ] || [ "$1" = '--help' ]; then
     usage
     exit 0
 fi
@@ -240,7 +240,7 @@ fi
 for _k in prog_name package version; do
     eval _v="\$$_k"
     if [ "$_v" = '' ]; then
-       echo "ERROR: Argument '`echo -n "$_k"|tr '[:lower:]' '[:upper:]'`' is required" >&2
+       echo "ERROR: Argument '$(printf '%s' "$_k"|tr '[:lower:]' '[:upper:]')' is required" >&2
        usage
        exit 1
     fi
@@ -254,7 +254,7 @@ fi
 
 # was given an executable
 if [ -x "$src" ]; then
-    _tmp="`mktemp`"
+    _tmp="$(mktemp)"
     #echo "[DEBUG] Using executable '$src' with argument '--help' redirected to '$_tmp'" >&2
     #echo "[DEBUG] > $src --help >$_tmp" >&2
     "$src" --help >"$_tmp"
@@ -262,13 +262,13 @@ if [ -x "$src" ]; then
 fi
 
 # destination (file)
-dest="`mktemp`"
+dest="$(mktemp)"
 
 # prepare some translations
-_t_files="`__tt 'FILES'`"
-_t_usage="`__tt 'USAGE'`"
-_t_environment="`__tt 'ENVIRONMENT'`"
-_t_synopsis="`__tt 'SYNOPSIS'`"
+_t_files="$(__tt 'FILES')"
+_t_usage="$(__tt 'USAGE')"
+_t_environment="$(__tt 'ENVIRONMENT')"
+_t_synopsis="$(__tt 'SYNOPSIS')"
 
 # modify the content with the following replacements:
 #  - remove relative path in FILES section
@@ -296,10 +296,10 @@ sed "$src"                                   \
 > "$dest"
 
 # display the tweaked help with header and name section at the top
-echo ".TH `echo "$prog_name"|tr '[[:lower:]]' '[[:upper:]]'` \"$man_section_num\" \"`date '+%B %Y'`\" \"$package $VERSION\" \"$man_section_name\""
+echo ".TH $(echo "$prog_name"|tr '[:lower:]' '[:upper:]') \"$man_section_num\" \"$(date '+%B %Y')\" \"$package $VERSION\" \"$man_section_name\""
 #echo "@documentlanguage $LANGUAGE"
 #echo "@documentencoding UTF-8"
-echo ".SH `__tt 'NAME'`"
+echo ".SH $(__tt 'NAME')"
 cat "$dest"
 
 # remove temp files

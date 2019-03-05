@@ -39,6 +39,7 @@ MSGMERGE           ?= msgmerge
 MSGCAT             ?= msgcat
 GZIP               ?= gzip
 TAR                ?= tar
+SHELLCHECK         ?= shellcheck
 
 # source
 #srcdir            ?= $(shell pwd)
@@ -202,6 +203,8 @@ MGSCATFLAGS        ?=
 MGSCATFLAGS_ALL    := --sort-output --width=$(WIDTH) 
 GZIPFLAGS          ?=
 TARFLAGS           ?= --gzip
+SHELLCHECKFLAGS    ?=
+SHELLCHECKFLAGS_ALL:= --check-sourced --external-sources --exclude=SC2034,SC1090,SC2174,SC2154,SC2230
 
 # tools flags
 HELP2TEXIFLAGS     ?=
@@ -400,6 +403,21 @@ clean:
 # check
 check:
 	@echo "## Testing is not yet implemented... Sorry! :-("
+
+
+# shellcheck
+shellcheck:
+	@echo "## Checking shell errors and POSIX compatibility"
+	@for s in $(MAIN_SCRIPT) $(CONFIGS) $(INCLUDES) $(TOOLS); do \
+	    echo "  $$s"; \
+	    _extra_args=''; \
+	    if [ "$$s" = "$(INCLUDE_DIR)/utils.inc.sh" ]; then \
+		_extra_args='--exclude SC2059'; \
+	    elif [ "$$s" = "$(TOOLS_DIR)/help2texi.sh" ]; then \
+		_extra_args='--exclude SC2059,SC1003,SC2153'; \
+	    fi; \
+	    $(SHELLCHECK) $(SHELLCHECKFLAGS) $(SHELLCHECKFLAGS_ALL) $$_extra_args "$$s"; \
+	done;
 
 
 # create all dist directories

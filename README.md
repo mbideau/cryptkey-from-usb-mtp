@@ -108,6 +108,14 @@ Else, on Debian/Ubuntu you can install them with:
 debian> apt install cryptsetup
 ```
 
+### shellcheck
+If you want to check for shell errors and POSIX compatibility, you will need `shellcheck` binary.
+On Debian/Ubuntu you can install them with:  
+```sh
+debian> apt install shellcheck
+```
+
+
 ## Installation
 
 ### Debian/Ubuntu specific
@@ -550,7 +558,6 @@ Follow the [Fixing/Updating a translation](#Fixing/Updating a translation) proce
 
 ### Develoments
 
-- [ ] make it pass `shellcheck`
 - [ ] build a test suite (maybe in Python)
 - [ ] add motd/smartphone pluged in picture
 - [ ] add a GUI
@@ -560,6 +567,7 @@ Follow the [Fixing/Updating a translation](#Fixing/Updating a translation) proce
 - [ ] replace whitelist/blacklist by allow/deny
 - [ ] remove the use of urlenc when key file path is defined in mapping
 - [X] add translation support (french locale added)
+- [X] make it pass `shellcheck`
 
 ### Communication
 
